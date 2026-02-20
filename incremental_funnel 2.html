@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time-to-Convert: Incremental Distribution</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;padding:16px}
+.wrap{max-width:1100px;margin:0 auto}
+h2{font-size:20px;font-weight:700;margin-bottom:4px}
+.sub{font-size:13px;color:#64748b;margin-bottom:16px}
+.controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:end}
+.ctrl-group label{font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:3px}
+.btn-group{display:flex;gap:2px;background:#f1f5f9;border-radius:6px;padding:2px}
+.btn{padding:5px 10px;font-size:12px;border:none;border-radius:5px;cursor:pointer;background:transparent;color:#64748b;font-weight:400}
+.btn.sm{padding:4px 8px;font-size:11px}
+.btn.active{background:white;color:#1e293b;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.08)}
+.check-label{font-size:12px;color:#475569;display:flex;align-items:center;gap:4px;cursor:pointer;padding-bottom:4px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:white;border:1px solid #e2e8f0;border-radius:8px;padding:12px}
+.card-title{font-size:13px;font-weight:600;color:#334155;margin-bottom:2px}
+.card-sub{font-size:11px;color:#94a3b8;margin-bottom:8px}
+.big-card{background:white;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:12px}
+.big-card .title{font-size:13px;font-weight:600;color:#334155;margin-bottom:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-bottom:12px;font-size:11px}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* Chart container */
+.chart-wrap{width:100%;overflow:hidden}
+.chart-svg{width:100%;display:block}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:2px solid #e2e8f0}
+th{padding:6px 8px;color:#64748b;font-weight:600}
+tbody tr{border-bottom:1px solid #f1f5f9}
+tbody tr:nth-child(even){background:#f8fafc}
+td{padding:5px 8px}
+.timing-bar{display:flex;height:14px;border-radius:3px;overflow:hidden}
+.peak-badge{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px}
+.early{color:#22c55e}.mid{color:#f59e0b}.late{color:#ef4444}
+.tooltip{position:fixed;background:white;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);pointer-events:none;z-index:100;display:none}
+.tooltip .tt-title{font-weight:600;margin-bottom:4px}
+.tooltip .tt-row{display:flex;justify-content:space-between;gap:16px}
+.tooltip .tt-val{font-weight:600}
+@media(max-width:700px){.grid4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="tooltip" id="tip"></div>
+<script>
+const DATA = {"overall":{"signed_to_incorporated":{"eligible":822,"converted":630,"rate":76.6,"buckets_count":[47,115,183,104,93,70,10,8],"buckets_pct_eligible":[5.7,14.0,22.3,12.7,11.3,8.5,1.2,1.0],"buckets_pct_converted":[7.5,18.3,29.0,16.5,14.8,11.1,1.6,1.3],"never":192,"never_pct":23.4},"incorporated_to_activated":{"eligible":630,"converted":589,"rate":93.5,"buckets_count":[516,7,18,13,16,12,2,5],"buckets_pct_eligible":[81.9,1.1,2.9,2.1,2.5,1.9,0.3,0.8],"buckets_pct_converted":[87.6,1.2,3.1,2.2,2.7,2.0,0.3,0.8],"never":41,"never_pct":6.5},"activated_to_income":{"eligible":589,"converted":412,"rate":69.9,"buckets_count":[4,29,66,60,109,78,34,32],"buckets_pct_eligible":[0.7,4.9,11.2,10.2,18.5,13.2,5.8,5.4],"buckets_pct_converted":[1.0,7.0,16.0,14.6,26.5,18.9,8.3,7.8],"never":177,"never_pct":30.1},"signed_to_income":{"eligible":822,"converted":412,"rate":50.1,"buckets_count":[0,5,23,50,102,122,49,61],"buckets_pct_eligible":[0.0,0.6,2.8,6.1,12.4,14.8,6.0,7.4],"buckets_pct_converted":[0.0,1.2,5.6,12.1,24.8,29.6,11.9,14.8],"never":410,"never_pct":49.9}},"overall_n":822,"by_category":{"Consulting Services":{"n":244,"d":{"signed_to_incorporated":{"eligible":244,"converted":204,"rate":83.6,"buckets_count":[16,40,73,37,21,14,0,3],"buckets_pct_eligible":[6.6,16.4,29.9,15.2,8.6,5.7,0.0,1.2],"buckets_pct_converted":[7.8,19.6,35.8,18.1,10.3,6.9,0.0,1.5],"never":40,"never_pct":16.4},"incorporated_to_activated":{"eligible":204,"converted":193,"rate":94.6,"buckets_count":[173,3,7,3,2,4,0,1],"buckets_pct_eligible":[84.8,1.5,3.4,1.5,1.0,2.0,0.0,0.5],"buckets_pct_converted":[89.6,1.6,3.6,1.6,1.0,2.1,0.0,0.5],"never":11,"never_pct":5.4},"activated_to_income":{"eligible":193,"converted":145,"rate":75.1,"buckets_count":[0,11,20,21,45,27,12,9],"buckets_pct_eligible":[0.0,5.7,10.4,10.9,23.3,14.0,6.2,4.7],"buckets_pct_converted":[0.0,7.6,13.8,14.5,31.0,18.6,8.3,6.2],"never":48,"never_pct":24.9},"signed_to_income":{"eligible":244,"converted":145,"rate":59.4,"buckets_count":[0,2,7,24,41,37,18,16],"buckets_pct_eligible":[0.0,0.8,2.9,9.8,16.8,15.2,7.4,6.6],"buckets_pct_converted":[0.0,1.4,4.8,16.6,28.3,25.5,12.4,11.0],"never":99,"never_pct":40.6}}},"Engineering, IT & Product":{"n":81,"d":{"signed_to_incorporated":{"eligible":81,"converted":70,"rate":86.4,"buckets_count":[9,8,23,11,13,5,0,1],"buckets_pct_eligible":[11.1,9.9,28.4,13.6,16.0,6.2,0.0,1.2],"buckets_pct_converted":[12.9,11.4,32.9,15.7,18.6,7.1,0.0,1.4],"never":11,"never_pct":13.6},"incorporated_to_activated":{"eligible":70,"converted":67,"rate":95.7,"buckets_count":[59,1,3,1,2,1,0,0],"buckets_pct_eligible":[84.3,1.4,4.3,1.4,2.9,1.4,0.0,0.0],"buckets_pct_converted":[88.1,1.5,4.5,1.5,3.0,1.5,0.0,0.0],"never":3,"never_pct":4.3},"activated_to_income":{"eligible":67,"converted":55,"rate":82.1,"buckets_count":[0,5,10,9,15,9,2,5],"buckets_pct_eligible":[0.0,7.5,14.9,13.4,22.4,13.4,3.0,7.5],"buckets_pct_converted":[0.0,9.1,18.2,16.4,27.3,16.4,3.6,9.1],"never":12,"never_pct":17.9},"signed_to_income":{"eligible":81,"converted":55,"rate":67.9,"buckets_count":[0,1,2,4,18,18,4,8],"buckets_pct_eligible":[0.0,1.2,2.5,4.9,22.2,22.2,4.9,9.9],"buckets_pct_converted":[0.0,1.8,3.6,7.3,32.7,32.7,7.3,14.5],"never":26,"never_pct":32.1}}},"Marketing, Writing & Sales":{"n":60,"d":{"signed_to_incorporated":{"eligible":60,"converted":51,"rate":85.0,"buckets_count":[3,11,17,6,8,4,2,0],"buckets_pct_eligible":[5.0,18.3,28.3,10.0,13.3,6.7,3.3,0.0],"buckets_pct_converted":[5.9,21.6,33.3,11.8,15.7,7.8,3.9,0.0],"never":9,"never_pct":15.0},"incorporated_to_activated":{"eligible":51,"converted":50,"rate":98.0,"buckets_count":[44,0,1,0,3,2,0,0],"buckets_pct_eligible":[86.3,0.0,2.0,0.0,5.9,3.9,0.0,0.0],"buckets_pct_converted":[88.0,0.0,2.0,0.0,6.0,4.0,0.0,0.0],"never":1,"never_pct":2.0},"activated_to_income":{"eligible":50,"converted":34,"rate":68.0,"buckets_count":[1,0,4,5,7,11,4,2],"buckets_pct_eligible":[2.0,0.0,8.0,10.0,14.0,22.0,8.0,4.0],"buckets_pct_converted":[2.9,0.0,11.8,14.7,20.6,32.4,11.8,5.9],"never":16,"never_pct":32.0},"signed_to_income":{"eligible":60,"converted":34,"rate":56.7,"buckets_count":[0,0,1,2,6,13,7,5],"buckets_pct_eligible":[0.0,0.0,1.7,3.3,10.0,21.7,11.7,8.3],"buckets_pct_converted":[0.0,0.0,2.9,5.9,17.6,38.2,20.6,14.7],"never":26,"never_pct":43.3}}},"Healthcare":{"n":55,"d":{"signed_to_incorporated":{"eligible":55,"converted":42,"rate":76.4,"buckets_count":[5,5,2,2,12,11,3,2],"buckets_pct_eligible":[9.1,9.1,3.6,3.6,21.8,20.0,5.5,3.6],"buckets_pct_converted":[11.9,11.9,4.8,4.8,28.6,26.2,7.1,4.8],"never":13,"never_pct":23.6},"incorporated_to_activated":{"eligible":42,"converted":41,"rate":97.6,"buckets_count":[32,2,1,5,1,0,0,0],"buckets_pct_eligible":[76.2,4.8,2.4,11.9,2.4,0.0,0.0,0.0],"buckets_pct_converted":[78.0,4.9,2.4,12.2,2.4,0.0,0.0,0.0],"never":1,"never_pct":2.4},"activated_to_income":{"eligible":41,"converted":27,"rate":65.9,"buckets_count":[0,3,4,1,6,7,5,1],"buckets_pct_eligible":[0.0,7.3,9.8,2.4,14.6,17.1,12.2,2.4],"buckets_pct_converted":[0.0,11.1,14.8,3.7,22.2,25.9,18.5,3.7],"never":14,"never_pct":34.1},"signed_to_income":{"eligible":55,"converted":27,"rate":49.1,"buckets_count":[0,0,1,2,3,12,2,7],"buckets_pct_eligible":[0.0,0.0,1.8,3.6,5.5,21.8,3.6,12.7],"buckets_pct_converted":[0.0,0.0,3.7,7.4,11.1,44.4,7.4,25.9],"never":28,"never_pct":50.9}}},"Design & Creative":{"n":30,"d":{"signed_to_incorporated":{"eligible":30,"converted":28,"rate":93.3,"buckets_count":[1,8,11,4,1,3,0,0],"buckets_pct_eligible":[3.3,26.7,36.7,13.3,3.3,10.0,0.0,0.0],"buckets_pct_converted":[3.6,28.6,39.3,14.3,3.6,10.7,0.0,0.0],"never":2,"never_pct":6.7},"incorporated_to_activated":{"eligible":28,"converted":25,"rate":89.3,"buckets_count":[22,0,0,2,0,0,0,1],"buckets_pct_eligible":[78.6,0.0,0.0,7.1,0.0,0.0,0.0,3.6],"buckets_pct_converted":[88.0,0.0,0.0,8.0,0.0,0.0,0.0,4.0],"never":3,"never_pct":10.7},"activated_to_income":{"eligible":25,"converted":16,"rate":64.0,"buckets_count":[0,0,3,3,5,4,0,1],"buckets_pct_eligible":[0.0,0.0,12.0,12.0,20.0,16.0,0.0,4.0],"buckets_pct_converted":[0.0,0.0,18.8,18.8,31.2,25.0,0.0,6.2],"never":9,"never_pct":36.0},"signed_to_income":{"eligible":30,"converted":16,"rate":53.3,"buckets_count":[0,0,2,0,5,7,1,1],"buckets_pct_eligible":[0.0,0.0,6.7,0.0,16.7,23.3,3.3,3.3],"buckets_pct_converted":[0.0,0.0,12.5,0.0,31.2,43.8,6.2,6.2],"never":14,"never_pct":46.7}}},"Real Estate & Construction":{"n":47,"d":{"signed_to_incorporated":{"eligible":47,"converted":36,"rate":76.6,"buckets_count":[5,9,7,4,7,3,0,1],"buckets_pct_eligible":[10.6,19.1,14.9,8.5,14.9,6.4,0.0,2.1],"buckets_pct_converted":[13.9,25.0,19.4,11.1,19.4,8.3,0.0,2.8],"never":11,"never_pct":23.4},"incorporated_to_activated":{"eligible":36,"converted":31,"rate":86.1,"buckets_count":[28,0,1,0,1,1,0,0],"buckets_pct_eligible":[77.8,0.0,2.8,0.0,2.8,2.8,0.0,0.0],"buckets_pct_converted":[90.3,0.0,3.2,0.0,3.2,3.2,0.0,0.0],"never":5,"never_pct":13.9},"activated_to_income":{"eligible":31,"converted":22,"rate":71.0,"buckets_count":[0,0,5,3,5,4,3,2],"buckets_pct_eligible":[0.0,0.0,16.1,9.7,16.1,12.9,9.7,6.5],"buckets_pct_converted":[0.0,0.0,22.7,13.6,22.7,18.2,13.6,9.1],"never":9,"never_pct":29.0},"signed_to_income":{"eligible":47,"converted":22,"rate":46.8,"buckets_count":[0,0,3,1,5,4,5,4],"buckets_pct_eligible":[0.0,0.0,6.4,2.1,10.6,8.5,10.6,8.5],"buckets_pct_converted":[0.0,0.0,13.6,4.5,22.7,18.2,22.7,18.2],"never":25,"never_pct":53.2}}},"E-commerce & Retail":{"n":24,"d":{"signed_to_incorporated":{"eligible":24,"converted":15,"rate":62.5,"buckets_count":[0,4,6,4,1,0,0,0],"buckets_pct_eligible":[0.0,16.7,25.0,16.7,4.2,0.0,0.0,0.0],"buckets_pct_converted":[0.0,26.7,40.0,26.7,6.7,0.0,0.0,0.0],"never":9,"never_pct":37.5},"incorporated_to_activated":{"eligible":15,"converted":12,"rate":80.0,"buckets_count":[11,0,0,0,1,0,0,0],"buckets_pct_eligible":[73.3,0.0,0.0,0.0,6.7,0.0,0.0,0.0],"buckets_pct_converted":[91.7,0.0,0.0,0.0,8.3,0.0,0.0,0.0],"never":3,"never_pct":20.0},"activated_to_income":{"eligible":12,"converted":7,"rate":58.3,"buckets_count":[1,1,1,2,1,1,0,0],"buckets_pct_eligible":[8.3,8.3,8.3,16.7,8.3,8.3,0.0,0.0],"buckets_pct_converted":[14.3,14.3,14.3,28.6,14.3,14.3,0.0,0.0],"never":5,"never_pct":41.7},"signed_to_income":{"eligible":24,"converted":7,"rate":29.2,"buckets_count":[0,1,0,1,3,2,0,0],"buckets_pct_eligible":[0.0,4.2,0.0,4.2,12.5,8.3,0.0,0.0],"buckets_pct_converted":[0.0,14.3,0.0,14.3,42.9,28.6,0.0,0.0],"never":17,"never_pct":70.8}}},"Coaching":{"n":28,"d":{"signed_to_incorporated":{"eligible":28,"converted":12,"rate":42.9,"buckets_count":[0,4,4,3,0,0,1,0],"buckets_pct_eligible":[0.0,14.3,14.3,10.7,0.0,0.0,3.6,0.0],"buckets_pct_converted":[0.0,33.3,33.3,25.0,0.0,0.0,8.3,0.0],"never":16,"never_pct":57.1},"incorporated_to_activated":{"eligible":12,"converted":12,"rate":100.0,"buckets_count":[8,0,0,2,1,1,0,0],"buckets_pct_eligible":[66.7,0.0,0.0,16.7,8.3,8.3,0.0,0.0],"buckets_pct_converted":[66.7,0.0,0.0,16.7,8.3,8.3,0.0,0.0],"never":0,"never_pct":0.0},"activated_to_income":{"eligible":12,"converted":9,"rate":75.0,"buckets_count":[0,2,3,0,3,1,0,0],"buckets_pct_eligible":[0.0,16.7,25.0,0.0,25.0,8.3,0.0,0.0],"buckets_pct_converted":[0.0,22.2,33.3,0.0,33.3,11.1,0.0,0.0],"never":3,"never_pct":25.0},"signed_to_income":{"eligible":28,"converted":9,"rate":32.1,"buckets_count":[0,0,1,3,1,2,0,2],"buckets_pct_eligible":[0.0,0.0,3.6,10.7,3.6,7.1,0.0,7.1],"buckets_pct_converted":[0.0,0.0,11.1,33.3,11.1,22.2,0.0,22.2],"never":19,"never_pct":67.9}}},"Arts & Entertainment":{"n":31,"d":{"signed_to_incorporated":{"eligible":31,"converted":15,"rate":48.4,"buckets_count":[0,3,4,4,3,1,0,0],"buckets_pct_eligible":[0.0,9.7,12.9,12.9,9.7,3.2,0.0,0.0],"buckets_pct_converted":[0.0,20.0,26.7,26.7,20.0,6.7,0.0,0.0],"never":16,"never_pct":51.6},"incorporated_to_activated":{"eligible":15,"converted":13,"rate":86.7,"buckets_count":[12,0,0,0,1,0,0,0],"buckets_pct_eligible":[80.0,0.0,0.0,0.0,6.7,0.0,0.0,0.0],"buckets_pct_converted":[92.3,0.0,0.0,0.0,7.7,0.0,0.0,0.0],"never":2,"never_pct":13.3},"activated_to_income":{"eligible":13,"converted":5,"rate":38.5,"buckets_count":[0,1,2,1,1,0,0,0],"buckets_pct_eligible":[0.0,7.7,15.4,7.7,7.7,0.0,0.0,0.0],"buckets_pct_converted":[0.0,20.0,40.0,20.0,20.0,0.0,0.0,0.0],"never":8,"never_pct":61.5},"signed_to_income":{"eligible":31,"converted":5,"rate":16.1,"buckets_count":[0,0,0,2,1,2,0,0],"buckets_pct_eligible":[0.0,0.0,0.0,6.5,3.2,6.5,0.0,0.0],"buckets_pct_converted":[0.0,0.0,0.0,40.0,20.0,40.0,0.0,0.0],"never":26,"never_pct":83.9}}},"Business, Finance & Accounting":{"n":40,"d":{"signed_to_incorporated":{"eligible":40,"converted":31,"rate":77.5,"buckets_count":[2,5,8,7,4,5,0,0],"buckets_pct_eligible":[5.0,12.5,20.0,17.5,10.0,12.5,0.0,0.0],"buckets_pct_converted":[6.5,16.1,25.8,22.6,12.9,16.1,0.0,0.0],"never":9,"never_pct":22.5},"incorporated_to_activated":{"eligible":31,"converted":30,"rate":96.8,"buckets_count":[26,1,1,0,0,0,1,1],"buckets_pct_eligible":[83.9,3.2,3.2,0.0,0.0,0.0,3.2,3.2],"buckets_pct_converted":[86.7,3.3,3.3,0.0,0.0,0.0,3.3,3.3],"never":1,"never_pct":3.2},"activated_to_income":{"eligible":30,"converted":17,"rate":56.7,"buckets_count":[1,1,1,0,6,3,4,1],"buckets_pct_eligible":[3.3,3.3,3.3,0.0,20.0,10.0,13.3,3.3],"buckets_pct_converted":[5.9,5.9,5.9,0.0,35.3,17.6,23.5,5.9],"never":13,"never_pct":43.3},"signed_to_income":{"eligible":40,"converted":17,"rate":42.5,"buckets_count":[0,0,2,1,3,5,3,3],"buckets_pct_eligible":[0.0,0.0,5.0,2.5,7.5,12.5,7.5,7.5],"buckets_pct_converted":[0.0,0.0,11.8,5.9,17.6,29.4,17.6,17.6],"never":23,"never_pct":57.5}}},"Vehicle, Transportation & Delivery":{"n":23,"d":{"signed_to_incorporated":{"eligible":23,"converted":14,"rate":60.9,"buckets_count":[0,3,2,2,6,1,0,0],"buckets_pct_eligible":[0.0,13.0,8.7,8.7,26.1,4.3,0.0,0.0],"buckets_pct_converted":[0.0,21.4,14.3,14.3,42.9,7.1,0.0,0.0],"never":9,"never_pct":39.1},"incorporated_to_activated":{"eligible":14,"converted":10,"rate":71.4,"buckets_count":[10,0,0,0,0,0,0,0],"buckets_pct_eligible":[71.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"buckets_pct_converted":[100.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"never":4,"never_pct":28.6},"activated_to_income":{"eligible":10,"converted":6,"rate":60.0,"buckets_count":[0,0,2,1,1,1,1,0],"buckets_pct_eligible":[0.0,0.0,20.0,10.0,10.0,10.0,10.0,0.0],"buckets_pct_converted":[0.0,0.0,33.3,16.7,16.7,16.7,16.7,0.0],"never":4,"never_pct":40.0},"signed_to_income":{"eligible":23,"converted":6,"rate":26.1,"buckets_count":[0,0,0,1,3,1,1,0],"buckets_pct_eligible":[0.0,0.0,0.0,4.3,13.0,4.3,4.3,0.0],"buckets_pct_converted":[0.0,0.0,0.0,16.7,50.0,16.7,16.7,0.0],"never":17,"never_pct":73.9}}},"Therapy":{"n":28,"d":{"signed_to_incorporated":{"eligible":28,"converted":20,"rate":71.4,"buckets_count":[0,2,3,1,5,8,1,0],"buckets_pct_eligible":[0.0,7.1,10.7,3.6,17.9,28.6,3.6,0.0],"buckets_pct_converted":[0.0,10.0,15.0,5.0,25.0,40.0,5.0,0.0],"never":8,"never_pct":28.6},"incorporated_to_activated":{"eligible":20,"converted":20,"rate":100.0,"buckets_count":[18,0,0,0,0,0,1,1],"buckets_pct_eligible":[90.0,0.0,0.0,0.0,0.0,0.0,5.0,5.0],"buckets_pct_converted":[90.0,0.0,0.0,0.0,0.0,0.0,5.0,5.0],"never":0,"never_pct":0.0},"activated_to_income":{"eligible":20,"converted":18,"rate":90.0,"buckets_count":[0,0,2,6,2,2,0,6],"buckets_pct_eligible":[0.0,0.0,10.0,30.0,10.0,10.0,0.0,30.0],"buckets_pct_converted":[0.0,0.0,11.1,33.3,11.1,11.1,0.0,33.3],"never":2,"never_pct":10.0},"signed_to_income":{"eligible":28,"converted":18,"rate":64.3,"buckets_count":[0,0,0,2,2,7,1,6],"buckets_pct_eligible":[0.0,0.0,0.0,7.1,7.1,25.0,3.6,21.4],"buckets_pct_converted":[0.0,0.0,0.0,11.1,11.1,38.9,5.6,33.3],"never":10,"never_pct":35.7}}}},"by_type":{"NONE":{"n":457,"d":{"signed_to_incorporated":{"eligible":457,"converted":347,"rate":75.9,"buckets_count":[0,17,118,74,67,54,10,7],"buckets_pct_eligible":[0.0,3.7,25.8,16.2,14.7,11.8,2.2,1.5],"buckets_pct_converted":[0.0,4.9,34.0,21.3,19.3,15.6,2.9,2.0],"never":110,"never_pct":24.1},"incorporated_to_activated":{"eligible":347,"converted":326,"rate":93.9,"buckets_count":[281,4,14,10,9,6,0,2],"buckets_pct_eligible":[81.0,1.2,4.0,2.9,2.6,1.7,0.0,0.6],"buckets_pct_converted":[86.2,1.2,4.3,3.1,2.8,1.8,0.0,0.6],"never":21,"never_pct":6.1},"activated_to_income":{"eligible":326,"converted":248,"rate":76.1,"buckets_count":[0,11,31,35,72,51,25,23],"buckets_pct_eligible":[0.0,3.4,9.5,10.7,22.1,15.6,7.7,7.1],"buckets_pct_converted":[0.0,4.4,12.5,14.1,29.0,20.6,10.1,9.3],"never":78,"never_pct":23.9},"signed_to_income":{"eligible":457,"converted":248,"rate":54.3,"buckets_count":[0,0,2,18,63,88,30,47],"buckets_pct_eligible":[0.0,0.0,0.4,3.9,13.8,19.3,6.6,10.3],"buckets_pct_converted":[0.0,0.0,0.8,7.3,25.4,35.5,12.1,19.0],"never":209,"never_pct":45.7}}},"LLC":{"n":310,"d":{"signed_to_incorporated":{"eligible":310,"converted":237,"rate":76.5,"buckets_count":[43,72,55,28,24,14,0,1],"buckets_pct_eligible":[13.9,23.2,17.7,9.0,7.7,4.5,0.0,0.3],"buckets_pct_converted":[18.1,30.4,23.2,11.8,10.1,5.9,0.0,0.4],"never":73,"never_pct":23.5},"incorporated_to_activated":{"eligible":237,"converted":219,"rate":92.4,"buckets_count":[193,2,4,3,7,5,2,3],"buckets_pct_eligible":[81.4,0.8,1.7,1.3,3.0,2.1,0.8,1.3],"buckets_pct_converted":[88.1,0.9,1.8,1.4,3.2,2.3,0.9,1.4],"never":18,"never_pct":7.6},"activated_to_income":{"eligible":219,"converted":143,"rate":65.3,"buckets_count":[3,16,27,22,32,25,9,9],"buckets_pct_eligible":[1.4,7.3,12.3,10.0,14.6,11.4,4.1,4.1],"buckets_pct_converted":[2.1,11.2,18.9,15.4,22.4,17.5,6.3,6.3],"never":76,"never_pct":34.7},"signed_to_income":{"eligible":310,"converted":143,"rate":46.1,"buckets_count":[0,3,16,25,35,33,17,14],"buckets_pct_eligible":[0.0,1.0,5.2,8.1,11.3,10.6,5.5,4.5],"buckets_pct_converted":[0.0,2.1,11.2,17.5,24.5,23.1,11.9,9.8],"never":167,"never_pct":53.9}}},"S_CORP":{"n":55,"d":{"signed_to_incorporated":{"eligible":55,"converted":46,"rate":83.6,"buckets_count":[4,26,10,2,2,2,0,0],"buckets_pct_eligible":[7.3,47.3,18.2,3.6,3.6,3.6,0.0,0.0],"buckets_pct_converted":[8.7,56.5,21.7,4.3,4.3,4.3,0.0,0.0],"never":9,"never_pct":16.4},"incorporated_to_activated":{"eligible":46,"converted":44,"rate":95.7,"buckets_count":[42,1,0,0,0,1,0,0],"buckets_pct_eligible":[91.3,2.2,0.0,0.0,0.0,2.2,0.0,0.0],"buckets_pct_converted":[95.5,2.3,0.0,0.0,0.0,2.3,0.0,0.0],"never":2,"never_pct":4.3},"activated_to_income":{"eligible":44,"converted":21,"rate":47.7,"buckets_count":[1,2,8,3,5,2,0,0],"buckets_pct_eligible":[2.3,4.5,18.2,6.8,11.4,4.5,0.0,0.0],"buckets_pct_converted":[4.8,9.5,38.1,14.3,23.8,9.5,0.0,0.0],"never":23,"never_pct":52.3},"signed_to_income":{"eligible":55,"converted":21,"rate":38.2,"buckets_count":[0,2,5,7,4,1,2,0],"buckets_pct_eligible":[0.0,3.6,9.1,12.7,7.3,1.8,3.6,0.0],"buckets_pct_converted":[0.0,9.5,23.8,33.3,19.0,4.8,9.5,0.0],"never":34,"never_pct":61.8}}}},"by_income":{"0-50K":{"n":21,"d":{"signed_to_incorporated":{"eligible":21,"converted":12,"rate":57.1,"buckets_count":[0,1,4,2,5,0,0,0],"buckets_pct_eligible":[0.0,4.8,19.0,9.5,23.8,0.0,0.0,0.0],"buckets_pct_converted":[0.0,8.3,33.3,16.7,41.7,0.0,0.0,0.0],"never":9,"never_pct":42.9},"incorporated_to_activated":{"eligible":12,"converted":11,"rate":91.7,"buckets_count":[9,0,1,0,0,1,0,0],"buckets_pct_eligible":[75.0,0.0,8.3,0.0,0.0,8.3,0.0,0.0],"buckets_pct_converted":[81.8,0.0,9.1,0.0,0.0,9.1,0.0,0.0],"never":1,"never_pct":8.3},"activated_to_income":{"eligible":11,"converted":4,"rate":36.4,"buckets_count":[0,0,1,0,3,0,0,0],"buckets_pct_eligible":[0.0,0.0,9.1,0.0,27.3,0.0,0.0,0.0],"buckets_pct_converted":[0.0,0.0,25.0,0.0,75.0,0.0,0.0,0.0],"never":7,"never_pct":63.6},"signed_to_income":{"eligible":21,"converted":4,"rate":19.0,"buckets_count":[0,0,0,1,1,1,1,0],"buckets_pct_eligible":[0.0,0.0,0.0,4.8,4.8,4.8,4.8,0.0],"buckets_pct_converted":[0.0,0.0,0.0,25.0,25.0,25.0,25.0,0.0],"never":17,"never_pct":81.0}}},"50-100K":{"n":154,"d":{"signed_to_incorporated":{"eligible":154,"converted":117,"rate":76.0,"buckets_count":[3,15,44,25,13,15,2,0],"buckets_pct_eligible":[1.9,9.7,28.6,16.2,8.4,9.7,1.3,0.0],"buckets_pct_converted":[2.6,12.8,37.6,21.4,11.1,12.8,1.7,0.0],"never":37,"never_pct":24.0},"incorporated_to_activated":{"eligible":117,"converted":107,"rate":91.5,"buckets_count":[94,1,4,3,4,1,0,0],"buckets_pct_eligible":[80.3,0.9,3.4,2.6,3.4,0.9,0.0,0.0],"buckets_pct_converted":[87.9,0.9,3.7,2.8,3.7,0.9,0.0,0.0],"never":10,"never_pct":8.5},"activated_to_income":{"eligible":107,"converted":69,"rate":64.5,"buckets_count":[0,7,12,7,17,13,4,9],"buckets_pct_eligible":[0.0,6.5,11.2,6.5,15.9,12.1,3.7,8.4],"buckets_pct_converted":[0.0,10.1,17.4,10.1,24.6,18.8,5.8,13.0],"never":38,"never_pct":35.5},"signed_to_income":{"eligible":154,"converted":69,"rate":44.8,"buckets_count":[0,0,4,10,18,20,7,10],"buckets_pct_eligible":[0.0,0.0,2.6,6.5,11.7,13.0,4.5,6.5],"buckets_pct_converted":[0.0,0.0,5.8,14.5,26.1,29.0,10.1,14.5],"never":85,"never_pct":55.2}}},"100-150K":{"n":173,"d":{"signed_to_incorporated":{"eligible":173,"converted":134,"rate":77.5,"buckets_count":[13,30,36,18,17,15,2,3],"buckets_pct_eligible":[7.5,17.3,20.8,10.4,9.8,8.7,1.2,1.7],"buckets_pct_converted":[9.7,22.4,26.9,13.4,12.7,11.2,1.5,2.2],"never":39,"never_pct":22.5},"incorporated_to_activated":{"eligible":134,"converted":129,"rate":96.3,"buckets_count":[110,3,6,3,3,1,1,2],"buckets_pct_eligible":[82.1,2.2,4.5,2.2,2.2,0.7,0.7,1.5],"buckets_pct_converted":[85.3,2.3,4.7,2.3,2.3,0.8,0.8,1.6],"never":5,"never_pct":3.7},"activated_to_income":{"eligible":129,"converted":91,"rate":70.5,"buckets_count":[1,3,22,14,28,16,1,6],"buckets_pct_eligible":[0.8,2.3,17.1,10.9,21.7,12.4,0.8,4.7],"buckets_pct_converted":[1.1,3.3,24.2,15.4,30.8,17.6,1.1,6.6],"never":38,"never_pct":29.5},"signed_to_income":{"eligible":173,"converted":91,"rate":52.6,"buckets_count":[0,0,7,13,23,32,6,10],"buckets_pct_eligible":[0.0,0.0,4.0,7.5,13.3,18.5,3.5,5.8],"buckets_pct_converted":[0.0,0.0,7.7,14.3,25.3,35.2,6.6,11.0],"never":82,"never_pct":47.4}}},"150-200K":{"n":139,"d":{"signed_to_incorporated":{"eligible":139,"converted":114,"rate":82.0,"buckets_count":[8,20,35,20,17,11,2,1],"buckets_pct_eligible":[5.8,14.4,25.2,14.4,12.2,7.9,1.4,0.7],"buckets_pct_converted":[7.0,17.5,30.7,17.5,14.9,9.6,1.8,0.9],"never":25,"never_pct":18.0},"incorporated_to_activated":{"eligible":114,"converted":108,"rate":94.7,"buckets_count":[94,1,4,2,3,2,1,1],"buckets_pct_eligible":[82.5,0.9,3.5,1.8,2.6,1.8,0.9,0.9],"buckets_pct_converted":[87.0,0.9,3.7,1.9,2.8,1.9,0.9,0.9],"never":6,"never_pct":5.3},"activated_to_income":{"eligible":108,"converted":74,"rate":68.5,"buckets_count":[1,3,11,10,20,16,9,4],"buckets_pct_eligible":[0.9,2.8,10.2,9.3,18.5,14.8,8.3,3.7],"buckets_pct_converted":[1.4,4.1,14.9,13.5,27.0,21.6,12.2,5.4],"never":34,"never_pct":31.5},"signed_to_income":{"eligible":139,"converted":74,"rate":53.2,"buckets_count":[0,0,4,6,21,20,14,9],"buckets_pct_eligible":[0.0,0.0,2.9,4.3,15.1,14.4,10.1,6.5],"buckets_pct_converted":[0.0,0.0,5.4,8.1,28.4,27.0,18.9,12.2],"never":65,"never_pct":46.8}}},"200-250K":{"n":92,"d":{"signed_to_incorporated":{"eligible":92,"converted":72,"rate":78.3,"buckets_count":[5,15,18,13,10,7,1,3],"buckets_pct_eligible":[5.4,16.3,19.6,14.1,10.9,7.6,1.1,3.3],"buckets_pct_converted":[6.9,20.8,25.0,18.1,13.9,9.7,1.4,4.2],"never":20,"never_pct":21.7},"incorporated_to_activated":{"eligible":72,"converted":71,"rate":98.6,"buckets_count":[62,0,0,1,3,4,0,1],"buckets_pct_eligible":[86.1,0.0,0.0,1.4,4.2,5.6,0.0,1.4],"buckets_pct_converted":[87.3,0.0,0.0,1.4,4.2,5.6,0.0,1.4],"never":1,"never_pct":1.4},"activated_to_income":{"eligible":71,"converted":56,"rate":78.9,"buckets_count":[1,4,7,12,9,13,4,6],"buckets_pct_eligible":[1.4,5.6,9.9,16.9,12.7,18.3,5.6,8.5],"buckets_pct_converted":[1.8,7.1,12.5,21.4,16.1,23.2,7.1,10.7],"never":15,"never_pct":21.1},"signed_to_income":{"eligible":92,"converted":56,"rate":60.9,"buckets_count":[0,0,4,7,12,18,5,10],"buckets_pct_eligible":[0.0,0.0,4.3,7.6,13.0,19.6,5.4,10.9],"buckets_pct_converted":[0.0,0.0,7.1,12.5,21.4,32.1,8.9,17.9],"never":36,"never_pct":39.1}}},"250-300K":{"n":47,"d":{"signed_to_incorporated":{"eligible":47,"converted":39,"rate":83.0,"buckets_count":[4,8,11,3,8,5,0,0],"buckets_pct_eligible":[8.5,17.0,23.4,6.4,17.0,10.6,0.0,0.0],"buckets_pct_converted":[10.3,20.5,28.2,7.7,20.5,12.8,0.0,0.0],"never":8,"never_pct":17.0},"incorporated_to_activated":{"eligible":39,"converted":35,"rate":89.7,"buckets_count":[31,1,0,1,0,2,0,0],"buckets_pct_eligible":[79.5,2.6,0.0,2.6,0.0,5.1,0.0,0.0],"buckets_pct_converted":[88.6,2.9,0.0,2.9,0.0,5.7,0.0,0.0],"never":4,"never_pct":10.3},"activated_to_income":{"eligible":35,"converted":26,"rate":74.3,"buckets_count":[0,3,5,1,9,5,3,0],"buckets_pct_eligible":[0.0,8.6,14.3,2.9,25.7,14.3,8.6,0.0],"buckets_pct_converted":[0.0,11.5,19.2,3.8,34.6,19.2,11.5,0.0],"never":9,"never_pct":25.7},"signed_to_income":{"eligible":47,"converted":26,"rate":55.3,"buckets_count":[0,0,2,3,7,8,4,2],"buckets_pct_eligible":[0.0,0.0,4.3,6.4,14.9,17.0,8.5,4.3],"buckets_pct_converted":[0.0,0.0,7.7,11.5,26.9,30.8,15.4,7.7],"never":21,"never_pct":44.7}}},"300K+":{"n":133,"d":{"signed_to_incorporated":{"eligible":133,"converted":102,"rate":76.7,"buckets_count":[13,19,25,12,18,12,3,0],"buckets_pct_eligible":[9.8,14.3,18.8,9.0,13.5,9.0,2.3,0.0],"buckets_pct_converted":[12.7,18.6,24.5,11.8,17.6,11.8,2.9,0.0],"never":31,"never_pct":23.3},"incorporated_to_activated":{"eligible":102,"converted":90,"rate":88.2,"buckets_count":[82,1,1,2,2,1,0,1],"buckets_pct_eligible":[80.4,1.0,1.0,2.0,2.0,1.0,0.0,1.0],"buckets_pct_converted":[91.1,1.1,1.1,2.2,2.2,1.1,0.0,1.1],"never":12,"never_pct":11.8},"activated_to_income":{"eligible":90,"converted":66,"rate":73.3,"buckets_count":[0,7,6,9,20,11,9,4],"buckets_pct_eligible":[0.0,7.8,6.7,10.0,22.2,12.2,10.0,4.4],"buckets_pct_converted":[0.0,10.6,9.1,13.6,30.3,16.7,13.6,6.1],"never":24,"never_pct":26.7},"signed_to_income":{"eligible":133,"converted":66,"rate":49.6,"buckets_count":[0,3,2,7,14,16,11,13],"buckets_pct_eligible":[0.0,2.3,1.5,5.3,10.5,12.0,8.3,9.8],"buckets_pct_converted":[0.0,4.5,3.0,10.6,21.2,24.2,16.7,19.7],"never":67,"never_pct":50.4}}}}};
+
+const BL=["0-1d","1-3d","3-7d","7-14d","14-30d","30-60d","60-90d","90+d"];
+const TR=[{key:"signed_to_incorporated",label:"Signed → Incorporated"},{key:"incorporated_to_activated",label:"Incorporated → Activated"},{key:"activated_to_income",label:"Activated → Income"},{key:"signed_to_income",label:"Signed → Income (E2E)"}];
+const CATS=["Consulting Services","Engineering, IT & Product","Marketing, Writing & Sales","Healthcare","Design & Creative","Real Estate & Construction","E-commerce & Retail","Coaching","Arts & Entertainment","Business, Finance & Accounting","Vehicle, Transportation & Delivery","Home & Care Services","Therapy","Personal Care & Wellness"];
+const INC=["0-50K","50-100K","100-150K","150-200K","200-250K","250-300K","300K+"];
+const TYP=["NONE","LLC","S_CORP"];
+const COL=["#2563eb","#dc2626","#16a34a","#ea580c","#7c3aed","#0891b2","#be185d","#4f46e5","#b45309","#0d9488","#6d28d9","#e11d48","#059669","#d97706"];
+const BCOL=["#22c55e","#84cc16","#eab308","#f59e0b","#f97316","#ef4444","#dc2626","#991b1b"];
+const NCOL="#94a3b8";
+
+let state={dim:"overall",trans:"activated_to_income",metric:"pct_eligible",showNever:true};
+const $=id=>document.getElementById(id);
+const tip=$("tip");
+
+function showTip(e,label,items){
+  tip.style.display="block";
+  tip.innerHTML='<div class="tt-title">'+label+'</div>'+items.map(function(x){return '<div class="tt-row"><span style="color:'+x[2]+'">'+x[0]+'</span><span class="tt-val" style="color:'+x[2]+'">'+x[1]+'%</span></div>'}).join("");
+  tip.style.left=Math.min(e.clientX+12,window.innerWidth-180)+"px";
+  tip.style.top=(e.clientY-10)+"px";
+}
+function hideTip(){tip.style.display="none"}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+function svgBarChart(vals, height, showLabels){
+  // vals: [{l, v, c}], renders SVG bar chart
+  var W=500, H=height||180, pad={l:36,r:8,t:8,b:showLabels?20:18};
+  var cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  var mx=Math.max.apply(null,vals.map(function(v){return v.v}))||1;
+  mx=Math.ceil(mx/5)*5||5;
+  var bw=cW/vals.length;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="chart-svg" xmlns="http://www.w3.org/2000/svg">';
+  // grid lines
+  for(var i=0;i<=4;i++){
+    var y=pad.t+cH*(1-i/4);
+    s+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#f1f5f9" stroke-width="1"/>';
+    s+='<text x="'+(pad.l-4)+'" y="'+(y+3)+'" text-anchor="end" fill="#94a3b8" font-size="9">'+(mx*i/4).toFixed(0)+'%</text>';
+  }
+  // bars
+  vals.forEach(function(v,i){
+    var bx=pad.l+i*bw+bw*0.15;
+    var bWidth=bw*0.7;
+    var bH=v.v/mx*cH;
+    var by=pad.t+cH-bH;
+    s+='<rect x="'+bx+'" y="'+by+'" width="'+bWidth+'" height="'+bH+'" rx="2" fill="'+v.c+'" onmousemove="showTip(event,\''+esc(v.l)+'\',[[\' \',\''+v.v+'\',\''+v.c+'\']])" onmouseout="hideTip()"><title>'+esc(v.l)+': '+v.v+'%</title></rect>';
+    s+='<text x="'+(bx+bWidth/2)+'" y="'+(H-2)+'" text-anchor="middle" fill="#64748b" font-size="8">'+esc(v.l)+'</text>';
+  });
+  s+='</svg>';
+  return '<div class="chart-wrap">'+s+'</div>';
+}
+
+function svgGroupedChart(labels, keys, getData, colors, height){
+  var W=600, H=height||300, pad={l:36,r:8,t:8,b:24};
+  var cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  var allV=[];
+  labels.forEach(function(bl,bi){keys.forEach(function(k,ki){allV.push(getData(bl,bi,k))})});
+  var mx=Math.max.apply(null,allV)||1;
+  mx=Math.ceil(mx/5)*5||5;
+  var gw=cW/labels.length;
+  var bw=gw/(keys.length+1);
+
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="chart-svg" xmlns="http://www.w3.org/2000/svg">';
+  for(var i=0;i<=4;i++){
+    var y=pad.t+cH*(1-i/4);
+    s+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#f1f5f9" stroke-width="1"/>';
+    s+='<text x="'+(pad.l-4)+'" y="'+(y+3)+'" text-anchor="end" fill="#94a3b8" font-size="9">'+(mx*i/4).toFixed(0)+'%</text>';
+  }
+  labels.forEach(function(bl,bi){
+    var gx=pad.l+bi*gw;
+    keys.forEach(function(k,ki){
+      var v=getData(bl,bi,k);
+      var bx=gx+ki*bw+bw*0.1;
+      var bWidth=bw*0.8;
+      var bH=v/mx*cH;
+      var by=pad.t+cH-bH;
+      s+='<rect x="'+bx+'" y="'+by+'" width="'+bWidth+'" height="'+Math.max(bH,0)+'" rx="1" fill="'+colors[ki%colors.length]+'" onmousemove="showTip(event,\''+esc(bl)+'\',[[\'' +esc(k)+ '\',\''+v+'\',\''+colors[ki%colors.length]+'\']])" onmouseout="hideTip()"><title>'+esc(k)+': '+v+'%</title></rect>';
+    });
+    s+='<text x="'+(gx+gw/2)+'" y="'+(H-4)+'" text-anchor="middle" fill="#64748b" font-size="8.5">'+esc(bl)+'</text>';
+  });
+  s+='</svg>';
+  return '<div class="chart-wrap">'+s+'</div>';
+}
+
+function render(){
+  var dim=state.dim,trans=state.trans,metric=state.metric,showNever=state.showNever;
+  var h='<h2>Time-to-Convert: Incremental Distribution</h2>';
+  h+='<p class="sub">Signups Jan 1 – Nov 1 2025 · % converting in each discrete time window (n='+DATA.overall_n.toLocaleString()+')</p>';
+  h+='<div class="controls"><div class="ctrl-group"><label>DIMENSION</label><div class="btn-group">';
+  [["overall","Overall"],["category","Business Category"],["type","Entity Type"],["income","Income Level"]].forEach(function(x){
+    h+='<button class="btn'+(dim===x[0]?' active':'')+'" onclick="setState(\'dim\',\''+x[0]+'\')">'+x[1]+'</button>';
+  });
+  h+='</div></div>';
+  if(dim!=="overall"){
+    h+='<div class="ctrl-group"><label>STAGE</label><div class="btn-group">';
+    TR.forEach(function(t){h+='<button class="btn sm'+(trans===t.key?' active':'')+'" onclick="setState(\'trans\',\''+t.key+'\')">'+t.label+'</button>'});
+    h+='</div></div>';
+  }
+  h+='<div class="ctrl-group"><label>DENOMINATOR</label><div class="btn-group">';
+  h+='<button class="btn'+(metric==="pct_eligible"?' active':'')+'" onclick="setState(\'metric\',\'pct_eligible\')">% of All Eligible</button>';
+  h+='<button class="btn'+(metric==="pct_converted"?' active':'')+'" onclick="setState(\'metric\',\'pct_converted\')">% of Converters Only</button>';
+  h+='</div></div>';
+  if(metric==="pct_eligible"&&dim!=="overall"){
+    h+='<label class="check-label"><input type="checkbox" '+(showNever?'checked':'')+' onchange="setState(\'showNever\',this.checked)"> Show "Never"</label>';
+  }
+  h+='</div>';
+
+  if(dim==="overall"){
+    h+='<div class="grid4">';
+    TR.forEach(function(t){
+      var d=DATA.overall[t.key];
+      var mk=metric==="pct_eligible"?"buckets_pct_eligible":"buckets_pct_converted";
+      var vals=BL.map(function(bl,i){return{l:bl,v:d[mk][i],c:BCOL[i]}});
+      if(metric==="pct_eligible") vals.push({l:"Never",v:d.never_pct,c:NCOL});
+      h+='<div class="card"><div class="card-title">'+t.label+'</div>';
+      h+='<div class="card-sub">'+d.eligible.toLocaleString()+' eligible → '+d.converted.toLocaleString()+' converted ('+d.rate+'%) · '+d.never_pct+'% never</div>';
+      h+=svgBarChart(vals,180,true);
+      h+='</div>';
+    });
+    h+='</div>';
+  } else {
+    var src,keys;
+    if(dim==="category"){src=DATA.by_category;keys=CATS.filter(function(k){return src[k]})}
+    else if(dim==="type"){src=DATA.by_type;keys=TYP.filter(function(k){return src[k]})}
+    else{src=DATA.by_income;keys=INC.filter(function(k){return src[k]})}
+    var mk=metric==="pct_eligible"?"buckets_pct_eligible":"buckets_pct_converted";
+
+    var labels=BL.slice();
+    if(showNever&&metric==="pct_eligible") labels.push("Never");
+
+    h+='<div class="big-card"><div class="title">'+TR.filter(function(t){return t.key===trans})[0].label+' — distribution by time window</div>';
+    h+='<div class="legend">';
+    keys.forEach(function(k,i){h+='<div class="legend-item"><div class="legend-dot" style="background:'+COL[i%COL.length]+'"></div>'+esc(k)+'</div>'});
+    h+='</div>';
+    h+=svgGroupedChart(labels,keys,function(bl,bi,k){
+      if(bl==="Never") return src[k].d[trans].never_pct;
+      return src[k].d[trans][mk][bi];
+    },COL,300);
+    h+='</div>';
+
+    // Summary table
+    var rows=keys.map(function(k){
+      var sd=src[k].d[trans];
+      var pc=sd.buckets_pct_converted;
+      var pi=pc.indexOf(Math.max.apply(null,pc));
+      var early=pc.slice(0,3).reduce(function(a,b){return a+b},0);
+      var mid=pc.slice(3,5).reduce(function(a,b){return a+b},0);
+      var late=pc.slice(5).reduce(function(a,b){return a+b},0);
+      return{name:k,n:src[k].n,rate:sd.rate,never:sd.never_pct,peak:BL[pi],peakV:pc[pi],early:early,mid:mid,late:late};
+    });
+    if(dim==="income") rows.sort(function(a,b){return INC.indexOf(a.name)-INC.indexOf(b.name)});
+    else if(dim==="type") rows.sort(function(a,b){return TYP.indexOf(a.name)-TYP.indexOf(b.name)});
+    else rows.sort(function(a,b){return b.rate-a.rate});
+
+    h+='<div class="big-card"><div class="title">Conversion timing profile (% of converters)</div>';
+    h+='<div style="overflow-x:auto"><table><thead><tr>';
+    h+='<th style="text-align:left">Segment</th><th style="text-align:right">n</th><th style="text-align:right">Conv. Rate</th><th style="text-align:right">Never</th><th style="text-align:center">Peak Window</th><th class="early" style="text-align:right">Early ≤7d</th><th class="mid" style="text-align:right">Mid 7-30d</th><th class="late" style="text-align:right">Late 30d+</th><th style="text-align:left;width:18%">Timing</th>';
+    h+='</tr></thead><tbody>';
+    rows.forEach(function(r){
+      h+='<tr><td style="font-weight:500">'+esc(r.name)+'</td>';
+      h+='<td style="text-align:right;color:#64748b">'+r.n+'</td>';
+      h+='<td style="text-align:right;font-weight:600">'+r.rate+'%</td>';
+      h+='<td style="text-align:right;color:#94a3b8">'+r.never+'%</td>';
+      h+='<td style="text-align:center"><span class="peak-badge">'+r.peak+' ('+r.peakV+'%)</span></td>';
+      h+='<td class="early" style="text-align:right;font-weight:500">'+r.early.toFixed(0)+'%</td>';
+      h+='<td class="mid" style="text-align:right;font-weight:500">'+r.mid.toFixed(0)+'%</td>';
+      h+='<td class="late" style="text-align:right;font-weight:500">'+r.late.toFixed(0)+'%</td>';
+      h+='<td><div class="timing-bar"><div style="width:'+r.early+'%;background:#22c55e"></div><div style="width:'+r.mid+'%;background:#f59e0b"></div><div style="width:'+r.late+'%;background:#ef4444"></div></div></td></tr>';
+    });
+    h+='</tbody></table></div></div>';
+  }
+  $("app").innerHTML=h;
+}
+
+function setState(k,v){state[k]=v;render()}
+render();
+</script>
+</body>
+</html>
