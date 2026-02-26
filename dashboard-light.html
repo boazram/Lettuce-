@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pre-Income Ticket Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; background: #F8F9FB; color: #1A202C; }
+button { font-family: inherit; }
+::-webkit-scrollbar { height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, AreaChart, Area } = Recharts;
+
+const DATA = {"headline":{"total_tickets":1379,"total_companies":785,"converted_companies":323,"never_converted_companies":462,"converted_tickets":637,"never_tickets":742,"converted_tickets_per_company":2.0,"never_tickets_per_company":1.6,"median_resolution_converted":31.6,"median_resolution_never":21.2},"monthly_trends":[{"month":"2025-01","group":"Converted","tickets":78,"companies":59},{"month":"2025-01","group":"Never Converted","tickets":73,"companies":61},{"month":"2025-02","group":"Converted","tickets":107,"companies":68},{"month":"2025-02","group":"Never Converted","tickets":76,"companies":61},{"month":"2025-03","group":"Converted","tickets":78,"companies":57},{"month":"2025-03","group":"Never Converted","tickets":95,"companies":69},{"month":"2025-04","group":"Converted","tickets":66,"companies":39},{"month":"2025-04","group":"Never Converted","tickets":71,"companies":57},{"month":"2025-05","group":"Converted","tickets":51,"companies":38},{"month":"2025-05","group":"Never Converted","tickets":40,"companies":35},{"month":"2025-06","group":"Converted","tickets":59,"companies":42},{"month":"2025-06","group":"Never Converted","tickets":62,"companies":52},{"month":"2025-07","group":"Converted","tickets":70,"companies":50},{"month":"2025-07","group":"Never Converted","tickets":75,"companies":54},{"month":"2025-08","group":"Converted","tickets":49,"companies":33},{"month":"2025-08","group":"Never Converted","tickets":87,"companies":59},{"month":"2025-09","group":"Converted","tickets":52,"companies":33},{"month":"2025-09","group":"Never Converted","tickets":95,"companies":68},{"month":"2025-10","group":"Converted","tickets":27,"companies":21},{"month":"2025-10","group":"Never Converted","tickets":68,"companies":57}],"category_by_group":[{"primary_category":"Account & Subscription Management","group":"Converted","count":75},{"primary_category":"Account & Subscription Management","group":"Never Converted","count":195},{"primary_category":"Biz Formation & Compliance","group":"Converted","count":205},{"primary_category":"Biz Formation & Compliance","group":"Never Converted","count":157},{"primary_category":"Engagement & Feedback","group":"Converted","count":46},{"primary_category":"Engagement & Feedback","group":"Never Converted","count":46},{"primary_category":"Financial Management & Reporting","group":"Converted","count":180},{"primary_category":"Financial Management & Reporting","group":"Never Converted","count":71},{"primary_category":"Misc. Inquiry","group":"Converted","count":26},{"primary_category":"Misc. Inquiry","group":"Never Converted","count":38},{"primary_category":"Technical Support","group":"Converted","count":15},{"primary_category":"Technical Support","group":"Never Converted","count":18},{"primary_category":"Unknown","group":"Converted","count":90},{"primary_category":"Unknown","group":"Never Converted","count":217}],"subcategory_account":[{"Subcategory":"Account Setup & Configuration","group":"Converted","count":31},{"Subcategory":"Account Setup & Configuration","group":"Never Converted","count":51},{"Subcategory":"Billing, Pricing, & Discounts","group":"Converted","count":18},{"Subcategory":"Billing, Pricing, & Discounts","group":"Never Converted","count":25},{"Subcategory":"Cancellation","group":"Converted","count":6},{"Subcategory":"Cancellation","group":"Never Converted","count":73},{"Subcategory":"Unsubscribe","group":"Never Converted","count":5},{"Subcategory":"Miscellaneous","group":"Never Converted","count":6}],"resolution_time":[{"primary_category":"Account & Subscription Management","group":"Converted","median_hours":43.7,"mean_hours":558.8,"count":75},{"primary_category":"Account & Subscription Management","group":"Never Converted","median_hours":29.3,"mean_hours":449.5,"count":195},{"primary_category":"Biz Formation & Compliance","group":"Converted","median_hours":44.8,"mean_hours":474.1,"count":205},{"primary_category":"Biz Formation & Compliance","group":"Never Converted","median_hours":39.2,"mean_hours":613.8,"count":157},{"primary_category":"Engagement & Feedback","group":"Converted","median_hours":28.2,"mean_hours":258.8,"count":46},{"primary_category":"Engagement & Feedback","group":"Never Converted","median_hours":16.0,"mean_hours":440.1,"count":46},{"primary_category":"Financial Management & Reporting","group":"Converted","median_hours":39.2,"mean_hours":411.8,"count":180},{"primary_category":"Financial Management & Reporting","group":"Never Converted","median_hours":27.2,"mean_hours":275.5,"count":71},{"primary_category":"Misc. Inquiry","group":"Converted","median_hours":29.0,"mean_hours":89.7,"count":26},{"primary_category":"Misc. Inquiry","group":"Never Converted","median_hours":4.9,"mean_hours":63.1,"count":38},{"primary_category":"Technical Support","group":"Converted","median_hours":24.8,"mean_hours":142.6,"count":15},{"primary_category":"Technical Support","group":"Never Converted","median_hours":128.4,"mean_hours":414.6,"count":18}],"ticket_timing":[{"months_before_income":0,"count":263},{"months_before_income":1,"count":197},{"months_before_income":2,"count":80},{"months_before_income":3,"count":36},{"months_before_income":4,"count":21},{"months_before_income":5,"count":10},{"months_before_income":6,"count":5}],"product_areas":{"cat_summary":[{"cat":"Biz Formation & Compliance","total":362,"converted":205,"never":157},{"cat":"Account & Subscription Mgmt","total":270,"converted":75,"never":195},{"cat":"Financial Mgmt & Reporting","total":251,"converted":180,"never":71},{"cat":"Engagement & Feedback","total":92,"converted":46,"never":46},{"cat":"Misc. Inquiry","total":64,"converted":26,"never":38},{"cat":"Technical Support","total":33,"converted":15,"never":18}],"subcats":[{"category":"Biz Formation & Compliance","sub":"Incorporation & Formation","converted":81,"never":59,"total":140},{"category":"Biz Formation & Compliance","sub":"Additional Info Needed","converted":43,"never":27,"total":70},{"category":"Biz Formation & Compliance","sub":"Notices & Documents","converted":51,"never":12,"total":63},{"category":"Biz Formation & Compliance","sub":"Existing LLC","converted":15,"never":24,"total":39},{"category":"Biz Formation & Compliance","sub":"Existing S-Corp","converted":2,"never":17,"total":19},{"category":"Account & Subscription Mgmt","sub":"Account Setup & Config","converted":36,"never":56,"total":92},{"category":"Account & Subscription Mgmt","sub":"Cancellation","converted":7,"never":77,"total":84},{"category":"Account & Subscription Mgmt","sub":"Billing, Pricing & Discounts","converted":23,"never":30,"total":53},{"category":"Account & Subscription Mgmt","sub":"Unsubscribe","converted":0,"never":8,"total":8},{"category":"Financial Mgmt & Reporting","sub":"Banking & Cards","converted":43,"never":18,"total":61},{"category":"Financial Mgmt & Reporting","sub":"Invoicing & Payments","converted":47,"never":10,"total":57},{"category":"Financial Mgmt & Reporting","sub":"Taxes","converted":29,"never":17,"total":46},{"category":"Financial Mgmt & Reporting","sub":"Accounting & Transactions","converted":26,"never":11,"total":37},{"category":"Financial Mgmt & Reporting","sub":"Payroll & Salary","converted":19,"never":7,"total":26},{"category":"Financial Mgmt & Reporting","sub":"Retirement & Benefits","converted":3,"never":2,"total":5},{"category":"Engagement & Feedback","sub":"Meeting/Call Request","converted":20,"never":31,"total":51},{"category":"Engagement & Feedback","sub":"Status Update Request","converted":18,"never":6,"total":24},{"category":"Engagement & Feedback","sub":"Product Feedback","converted":6,"never":4,"total":10},{"category":"Technical Support","sub":"System Issue","converted":10,"never":10,"total":20},{"category":"Technical Support","sub":"User Error","converted":2,"never":3,"total":5},{"category":"Technical Support","sub":"Integration & Compatibility","converted":2,"never":1,"total":3}],"top_issues":[{"name":"Incorporation & Formation","converted":82,"never":61,"total":143},{"name":"Account Setup & Config","converted":42,"never":56,"total":98},{"name":"Cancellation","converted":7,"never":77,"total":84},{"name":"Additional Info Needed","converted":44,"never":27,"total":71},{"name":"Notices & Documents","converted":53,"never":12,"total":65},{"name":"Banking & Cards","converted":43,"never":18,"total":61},{"name":"Invoicing & Payments","converted":47,"never":10,"total":57},{"name":"Billing, Pricing & Discounts","converted":24,"never":30,"total":54},{"name":"Meeting/Call Request","converted":20,"never":31,"total":51},{"name":"Taxes","converted":29,"never":18,"total":47},{"name":"Accounting & Transactions","converted":26,"never":13,"total":39},{"name":"Existing LLC","converted":15,"never":24,"total":39},{"name":"Status Update Request","converted":21,"never":6,"total":27},{"name":"Payroll & Salary","converted":19,"never":7,"total":26},{"name":"System Issue","converted":10,"never":10,"total":20}]}};
+
+const C = {
+  bg: '#F8F9FB', surface: '#FFFFFF', surfaceHover: '#F1F5F9', border: '#E2E8F0', borderLight: '#CBD5E0',
+  text: '#1A202C', textMuted: '#4A5568', textDim: '#A0AEC0',
+  converted: '#059669', convertedBg: '#ECFDF5', never: '#DC2626', neverBg: '#FEF2F2',
+  accent: '#2563EB', accentBg: '#EFF6FF', warning: '#D97706', warningBg: '#FFFBEB',
+  chart4: '#7C3AED', chart6: '#EA580C',
+};
+const SECTION_COLORS = ['#059669','#2563EB','#7C3AED','#EA580C','#D97706','#DC2626'];
+
+const cardStyle = { background: C.surface, border: '1px solid ' + C.border, borderRadius: 12, padding: 24, position: 'relative', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const topBar = (color) => ({ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: color, opacity: 0.6 });
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return React.createElement('div', { style: { background: '#fff', border: '1px solid ' + C.border, borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }},
+    React.createElement('div', { style: { color: C.textDim, fontSize: 11, marginBottom: 4 }}, label),
+    payload.map((p, i) => React.createElement('div', { key: i, style: { color: p.color || C.text, fontSize: 13, fontWeight: 600, display: 'flex', gap: 8, alignItems: 'center' }},
+      React.createElement('span', { style: { width: 8, height: 8, borderRadius: '50%', background: p.color, display: 'inline-block' }}),
+      p.name + ': ' + (typeof p.value === 'number' ? p.value.toLocaleString() : p.value)
+    ))
+  );
+};
+
+const KPI = ({ label, value, sub, color }) => React.createElement('div', { style: { ...cardStyle, padding: '18px 20px', minWidth: 140, flex: 1 }},
+  React.createElement('div', { style: topBar(color) }),
+  React.createElement('div', { style: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6 }}, label),
+  React.createElement('div', { style: { fontSize: 28, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}, value),
+  sub && React.createElement('div', { style: { fontSize: 12, color: C.textDim, marginTop: 4 }}, sub)
+);
+
+const SectionHeader = ({ num, title, subtitle, color }) => React.createElement('div', { style: { marginBottom: 20 }},
+  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 }},
+    React.createElement('span', { style: { background: color, color: '#fff', fontWeight: 800, fontSize: 12, width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}, num),
+    React.createElement('h2', { style: { fontSize: 20, fontWeight: 700, color: C.text, margin: 0 }}, title)
+  ),
+  subtitle && React.createElement('p', { style: { color: C.textMuted, fontSize: 13, margin: '6px 0 0 40px', lineHeight: 1.4 }}, subtitle)
+);
+
+const Insight = ({ children, type }) => {
+  const colors = { info: C.accent, success: C.converted, warning: C.warning, danger: C.never };
+  const bgs = { info: C.accentBg, success: C.convertedBg, warning: C.warningBg, danger: C.neverBg };
+  return React.createElement('div', { style: { background: bgs[type||'info'], border: '1px solid ' + colors[type||'info'] + '30', borderRadius: 8, padding: '10px 14px', marginTop: 12, display: 'flex', gap: 8 }},
+    React.createElement('span', { style: { color: colors[type||'info'], fontSize: 14, marginTop: 1 }}, '\u25c6'),
+    React.createElement('span', { style: { color: C.textMuted, fontSize: 13, lineHeight: 1.5 }}, children)
+  );
+};
+
+const sections = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'product', label: 'Product Areas' },
+  { id: 'categories', label: 'Ticket Types' },
+  { id: 'business', label: 'Business Categories' },
+  { id: 'entity', label: 'Entity Types' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'insights', label: 'Key Insights' },
+];
+
+function Dashboard() {
+  const [activeSection, setActiveSection] = useState('overview');
+  const [selectedEntity, setSelectedEntity] = useState('No Entity (New)');
+  const [expandedCat, setExpandedCat] = useState(null);
+  const h = DATA.headline;
+
+  const monthlyData = useMemo(() => {
+    const months = [...new Set(DATA.monthly_trends.map(d => d.month))].sort();
+    return months.map(m => {
+      const conv = DATA.monthly_trends.find(d => d.month === m && d.group === 'Converted') || { tickets: 0 };
+      const never = DATA.monthly_trends.find(d => d.month === m && d.group === 'Never Converted') || { tickets: 0 };
+      const total = conv.tickets + never.tickets;
+      return { monthLabel: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short' }), converted: conv.tickets, never: never.tickets, total, convPct: total > 0 ? Math.round(conv.tickets / total * 100) : 0 };
+    });
+  }, []);
+
+  const categoryData = useMemo(() => {
+    const cats = [...new Set(DATA.category_by_group.filter(d => d.primary_category !== 'Unknown').map(d => d.primary_category))];
+    return cats.map(cat => {
+      const conv = DATA.category_by_group.find(d => d.primary_category === cat && d.group === 'Converted')?.count || 0;
+      const never = DATA.category_by_group.find(d => d.primary_category === cat && d.group === 'Never Converted')?.count || 0;
+      return { name: cat, shortName: cat.length > 25 ? cat.slice(0, 22) + '...' : cat, converted: conv, never, total: conv + never };
+    }).sort((a, b) => b.total - a.total);
+  }, []);
+
+  const cancellationData = useMemo(() => {
+    const sub = DATA.subcategory_account;
+    return ['Cancellation', 'Account Setup & Configuration', 'Billing, Pricing, & Discounts'].map(name => ({
+      name: name === 'Account Setup & Configuration' ? 'Account Setup' : name === 'Billing, Pricing, & Discounts' ? 'Billing/Pricing' : name,
+      converted: sub.find(d => d.Subcategory === name && d.group === 'Converted')?.count || 0,
+      never: sub.find(d => d.Subcategory === name && d.group === 'Never Converted')?.count || 0,
+    }));
+  }, []);
+
+  const resolutionData = useMemo(() => {
+    const cats = [...new Set(DATA.resolution_time.map(d => d.primary_category))].filter(d => d !== 'Unknown');
+    return cats.map(cat => {
+      const conv = DATA.resolution_time.find(d => d.primary_category === cat && d.group === 'Converted');
+      const never = DATA.resolution_time.find(d => d.primary_category === cat && d.group === 'Never Converted');
+      return { name: cat.length > 22 ? cat.slice(0, 20) + '\u2026' : cat, convMedian: conv?.median_hours || 0, neverMedian: never?.median_hours || 0 };
+    });
+  }, []);
+
+  const ticketTimingData = useMemo(() => DATA.ticket_timing.map(d => ({ ...d, label: d.months_before_income === 0 ? 'Same month' : d.months_before_income + 'mo before' })), []);
+
+  const propensityData = [
+    { name: 'Insurance', convPct: 63.6, neverPct: 10.4, convN: '7/11', neverN: '7/67', totalCos: 78 },
+    { name: 'Content Creation', convPct: 58.3, neverPct: 15.0, convN: '7/12', neverN: '16/107', totalCos: 119 },
+    { name: 'Therapy', convPct: 51.6, neverPct: 6.2, convN: '16/31', neverN: '13/208', totalCos: 239 },
+    { name: 'Real Estate & Constr.', convPct: 47.4, neverPct: 4.0, convN: '18/38', neverN: '22/547', totalCos: 585 },
+    { name: 'Personal Care', convPct: 43.8, neverPct: 4.8, convN: '7/16', neverN: '8/167', totalCos: 183 },
+    { name: 'Healthcare', convPct: 41.5, neverPct: 7.4, convN: '22/53', neverN: '25/336', totalCos: 389 },
+    { name: 'Biz, Finance & Acct', convPct: 40.7, neverPct: 5.8, convN: '11/27', neverN: '14/242', totalCos: 269 },
+    { name: 'Marketing & Sales', convPct: 38.3, neverPct: 7.8, convN: '23/60', neverN: '26/332', totalCos: 392 },
+    { name: 'Engineering & IT', convPct: 36.4, neverPct: 9.2, convN: '40/110', neverN: '32/347', totalCos: 457 },
+    { name: 'Consulting', convPct: 35.9, neverPct: 9.3, convN: '117/326', neverN: '100/1080', totalCos: 1406 },
+    { name: 'Design & Creative', convPct: 34.1, neverPct: 7.8, convN: '15/44', neverN: '20/257', totalCos: 301 },
+    { name: 'Coaching', convPct: 22.7, neverPct: 3.4, convN: '5/22', neverN: '8/236', totalCos: 258 },
+    { name: 'Arts & Entertainment', convPct: 20.8, neverPct: 5.4, convN: '5/24', neverN: '16/299', totalCos: 323 },
+  ];
+
+  const ENTITY_TICKETS = {
+    volume: [
+      { entity: 'No Entity (New)', convPct: 37.3, neverPct: 5.3, convN: '196 / 526', neverN: '194 / 3,688', convRate: 2.02, neverRate: 1.59 },
+      { entity: 'LLC', convPct: 34.2, neverPct: 6.7, convN: '113 / 330', neverN: '161 / 2,420', convRate: 1.90, neverRate: 1.58 },
+      { entity: 'S-Corp', convPct: 35.9, neverPct: 5.5, convN: '14 / 39', neverN: '38 / 689', convRate: 1.93, neverRate: 2.00 },
+    ],
+    catMix: {
+      'No Entity (New)': [
+        { cat: 'Biz Formation', converted: 138, never: 77 },
+        { cat: 'Account & Sub', converted: 47, never: 94 },
+        { cat: 'Financial Mgmt', converted: 93, never: 17 },
+        { cat: 'Engagement', converted: 35, never: 24 },
+        { cat: 'Misc/Tech', converted: 24, never: 14 },
+      ],
+      'LLC': [
+        { cat: 'Biz Formation', converted: 62, never: 53 },
+        { cat: 'Account & Sub', converted: 25, never: 65 },
+        { cat: 'Financial Mgmt', converted: 79, never: 28 },
+        { cat: 'Engagement', converted: 9, never: 12 },
+        { cat: 'Misc/Tech', converted: 14, never: 17 },
+      ],
+      'S-Corp': [
+        { cat: 'Account & Sub', converted: 3, never: 23 },
+        { cat: 'Biz Formation', converted: 5, never: 12 },
+        { cat: 'Financial Mgmt', converted: 8, never: 7 },
+        { cat: 'Engagement', converted: 2, never: 4 },
+        { cat: 'Misc/Tech', converted: 3, never: 3 },
+      ],
+    },
+    topSubs: {
+      'No Entity (New)': [
+        { sub: 'Incorporation & Formation', conv: 64, never: 41 },
+        { sub: 'Account Setup & Config', conv: 28, never: 23 },
+        { sub: 'Additional Info Needed', conv: 28, never: 20 },
+        { sub: 'Cancellation', conv: 3, never: 38 },
+        { sub: 'Notices & Documents', conv: 34, never: 6 },
+        { sub: 'Invoicing & Payments', conv: 28, never: 6 },
+        { sub: 'Billing & Pricing', conv: 14, never: 17 },
+        { sub: 'Banking & Cards', conv: 24, never: 4 },
+      ],
+      'LLC': [
+        { sub: 'Incorporation & Formation', conv: 18, never: 17 },
+        { sub: 'Account Setup & Config', conv: 13, never: 19 },
+        { sub: 'Existing LLC', conv: 10, never: 17 },
+        { sub: 'Cancellation', conv: 3, never: 23 },
+        { sub: 'Banking & Cards', conv: 17, never: 9 },
+        { sub: 'Additional Info Needed', conv: 15, never: 7 },
+        { sub: 'Taxes', conv: 15, never: 7 },
+        { sub: 'Invoicing & Payments', conv: 17, never: 3 },
+      ],
+      'S-Corp': [
+        { sub: 'Cancellation', conv: 1, never: 13 },
+        { sub: 'Existing S-Corp', conv: 2, never: 7 },
+        { sub: 'Account Setup & Config', conv: 1, never: 5 },
+        { sub: 'Accounting & Transactions', conv: 4, never: 2 },
+        { sub: 'Meeting/Call Request', conv: 1, never: 4 },
+        { sub: 'Banking & Cards', conv: 2, never: 2 },
+        { sub: 'Billing & Pricing', conv: 1, never: 2 },
+        { sub: 'System Issue', conv: 1, never: 2 },
+      ],
+    }
+  };
+
+  const productAreas = DATA.product_areas;
+
+  const B = (tag, props, ...ch) => React.createElement(tag, props, ...ch);
+
+  const renderOverview = () => B('div', null,
+    B('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 28 }},
+      B(KPI, { label: 'Total Tickets', value: h.total_tickets.toLocaleString(), sub: 'Pre-income, Jan\u2013Oct 2025', color: C.accent }),
+      B(KPI, { label: 'Companies', value: h.total_companies, sub: 'With matched tickets', color: C.accent }),
+      B(KPI, { label: 'Converted', value: h.converted_companies, sub: Math.round(h.converted_companies / h.total_companies * 100) + '% of companies', color: C.converted }),
+      B(KPI, { label: 'Never Converted', value: h.never_converted_companies, sub: Math.round(h.never_converted_companies / h.total_companies * 100) + '% of companies', color: C.never }),
+      B(KPI, { label: 'Tix / Converted Co.', value: h.converted_tickets_per_company, sub: 'avg pre-income tickets', color: C.converted }),
+      B(KPI, { label: 'Tix / Never Co.', value: h.never_tickets_per_company, sub: 'avg pre-income tickets', color: C.never }),
+    ),
+    B(SectionHeader, { num: 'A', title: 'Monthly Ticket Volume', subtitle: 'Converted vs. never-converted companies, stacked by month', color: SECTION_COLORS[0] }),
+    B('div', { style: cardStyle },
+      B('div', { style: topBar(C.accent) }),
+      B(ResponsiveContainer, { width: '100%', height: 300 },
+        B(BarChart, { data: monthlyData, barGap: 0 },
+          B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border }),
+          B(XAxis, { dataKey: 'monthLabel', tick: { fill: C.textMuted, fontSize: 12 }, axisLine: { stroke: C.border } }),
+          B(YAxis, { tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(Tooltip, { content: B(CustomTooltip) }),
+          B(Legend, { wrapperStyle: { fontSize: 12 } }),
+          B(Bar, { dataKey: 'converted', name: 'Converted', stackId: 'a', fill: C.converted }),
+          B(Bar, { dataKey: 'never', name: 'Never Converted', stackId: 'a', fill: C.never, radius: [4,4,0,0] }),
+        )
+      ),
+      B(Insight, { type: 'warning' }, 'Never-converted tickets trend upward from Aug\u2192Oct while converted tickets decline \u2014 suggesting newer signups are converting at lower rates, or recent cohorts face more friction.')
+    )
+  );
+
+  const renderCategories = () => B('div', null,
+    B(SectionHeader, { num: '1', title: 'Ticket Categories: Converted vs. Never', subtitle: 'What are people asking about before reaching income? Excludes uncategorized tickets.', color: SECTION_COLORS[0] }),
+    B('div', { style: cardStyle },
+      B('div', { style: topBar(C.accent) }),
+      B(ResponsiveContainer, { width: '100%', height: 340 },
+        B(BarChart, { data: categoryData, layout: 'vertical', margin: { left: 10 } },
+          B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border, horizontal: false }),
+          B(XAxis, { type: 'number', tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(YAxis, { dataKey: 'shortName', type: 'category', width: 180, tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(Tooltip, { content: B(CustomTooltip) }),
+          B(Legend, { wrapperStyle: { fontSize: 12 } }),
+          B(Bar, { dataKey: 'converted', name: 'Converted', fill: C.converted, radius: [0,4,4,0], barSize: 14 }),
+          B(Bar, { dataKey: 'never', name: 'Never Converted', fill: C.never, radius: [0,4,4,0], barSize: 14 }),
+        )
+      ),
+      B(Insight, { type: 'success' }, B('span', null, B('strong', null, 'Biz Formation'), ' skews toward converted (205 vs 157), and ', B('strong', null, 'Financial Mgmt'), ' is 2.5x higher for converted (180 vs 71).')),
+      B(Insight, { type: 'danger' }, B('span', null, B('strong', null, 'Account & Subscription'), ' skews heavily toward never-converted (195 vs 75). This is where cancellations, billing issues, and setup problems live.'))
+    ),
+    B('div', { style: { marginTop: 28 } },
+      B(SectionHeader, { num: '2', title: 'The Cancellation Signal', subtitle: 'Account & Subscription subcategory breakdown', color: SECTION_COLORS[5] }),
+      B('div', { style: cardStyle },
+        B('div', { style: topBar(C.never) }),
+        B(ResponsiveContainer, { width: '100%', height: 220 },
+          B(BarChart, { data: cancellationData, barGap: 4 },
+            B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border }),
+            B(XAxis, { dataKey: 'name', tick: { fill: C.textMuted, fontSize: 12 }, axisLine: { stroke: C.border } }),
+            B(YAxis, { tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+            B(Tooltip, { content: B(CustomTooltip) }),
+            B(Legend, { wrapperStyle: { fontSize: 12 } }),
+            B(Bar, { dataKey: 'converted', name: 'Converted', fill: C.converted, radius: [4,4,0,0], barSize: 32 }),
+            B(Bar, { dataKey: 'never', name: 'Never Converted', fill: C.never, radius: [4,4,0,0], barSize: 32 }),
+          )
+        ),
+        B(Insight, { type: 'danger' }, B('span', null, B('strong', null, '73 cancellation tickets'), ' from never-converted vs. only ', B('strong', null, '6'), ' from converted \u2014 a 12:1 ratio.'))
+      )
+    ),
+    B('div', { style: { marginTop: 28 } },
+      B(SectionHeader, { num: '3', title: 'Resolution Time by Category', subtitle: 'Median hours to close tickets', color: SECTION_COLORS[2] }),
+      B('div', { style: cardStyle },
+        B('div', { style: topBar(C.chart4) }),
+        B(ResponsiveContainer, { width: '100%', height: 300 },
+          B(BarChart, { data: resolutionData, barGap: 4 },
+            B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border }),
+            B(XAxis, { dataKey: 'name', tick: { fill: C.textMuted, fontSize: 10 }, axisLine: { stroke: C.border }, angle: -15, textAnchor: 'end', height: 60 }),
+            B(YAxis, { tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+            B(Tooltip, { content: B(CustomTooltip) }),
+            B(Legend, { wrapperStyle: { fontSize: 12 } }),
+            B(Bar, { dataKey: 'convMedian', name: 'Converted', fill: C.converted, radius: [4,4,0,0], barSize: 24 }),
+            B(Bar, { dataKey: 'neverMedian', name: 'Never Converted', fill: C.never, radius: [4,4,0,0], barSize: 24 }),
+          )
+        ),
+        B(Insight, { type: 'info' }, B('span', null, 'Converted users consistently wait ', B('strong', null, 'longer'), ' for resolution (31.6h vs 21.2h). ', B('strong', null, 'Technical Support'), ' for never-converted takes 128h median.'))
+      )
+    )
+  );
+
+  const renderBusiness = () => B('div', null,
+    B(SectionHeader, { num: '1', title: 'Support Ticket Propensity by Business Category', subtitle: '% of companies in each category that filed pre-income tickets (5+ companies each group)', color: SECTION_COLORS[3] }),
+    B('div', { style: cardStyle },
+      B('div', { style: topBar(C.warning) }),
+      B(ResponsiveContainer, { width: '100%', height: 480 },
+        B(BarChart, { data: propensityData, layout: 'vertical', margin: { left: 10 } },
+          B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border, horizontal: false }),
+          B(XAxis, { type: 'number', domain: [0, 70], tick: { fill: C.textMuted, fontSize: 11 }, tickFormatter: v => v + '%', axisLine: { stroke: C.border } }),
+          B(YAxis, { dataKey: 'name', type: 'category', width: 160, tick: ({ x, y, payload }) => {
+            const d = propensityData.find(p => p.name === payload.value);
+            return B('g', { transform: 'translate(' + x + ',' + y + ')' },
+              B('text', { x: -4, y: 0, dy: -4, textAnchor: 'end', fill: C.textMuted, fontSize: 11 }, payload.value),
+              B('text', { x: -4, y: 0, dy: 10, textAnchor: 'end', fill: C.textDim, fontSize: 9 }, d ? 'n=' + d.totalCos.toLocaleString() : '')
+            );
+          }, axisLine: { stroke: C.border } }),
+          B(Tooltip, { content: ({ active, payload }) => active && payload?.length ? B('div', { style: { background: '#fff', border: '1px solid ' + C.border, borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' } },
+            B('div', { style: { color: C.text, fontSize: 13, fontWeight: 600, marginBottom: 4 } }, payload[0].payload.name, ' ', B('span', { style: { color: C.textDim, fontWeight: 400, fontSize: 11 } }, '(' + payload[0].payload.totalCos.toLocaleString() + ' companies)')),
+            B('div', { style: { color: C.converted, fontSize: 13 } }, 'Converted: ' + payload[0].payload.convPct + '% (' + payload[0].payload.convN + ')'),
+            B('div', { style: { color: C.never, fontSize: 13 } }, 'Never: ' + payload[0].payload.neverPct + '% (' + payload[0].payload.neverN + ')')
+          ) : null }),
+          B(Legend, { wrapperStyle: { fontSize: 12 } }),
+          B(Bar, { dataKey: 'convPct', name: 'Converted', fill: C.converted, barSize: 12, radius: [0,4,4,0] }),
+          B(Bar, { dataKey: 'neverPct', name: 'Never Converted', fill: C.never, barSize: 12, radius: [0,4,4,0] }),
+        )
+      ),
+      B(Insight, { type: 'success' }, B('span', null, 'Converted companies are ', B('strong', null, '4\u201310\u00d7 more likely to file tickets'), ' than never-converted across every category.')),
+      B(Insight, { type: 'info' }, B('span', null, 'Never-converted ticket rates are uniformly low (3\u201315%) regardless of category. ', B('strong', null, 'Support engagement is almost exclusively a converted-user behavior.')))
+    )
+  );
+
+  const renderEntity = () => B('div', null,
+    B(SectionHeader, { num: '1', title: 'Ticket Filing Propensity by Entity Type', subtitle: '% of companies in each entity type that filed pre-income support tickets', color: SECTION_COLORS[0] }),
+    B('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 } },
+      ENTITY_TICKETS.volume.map((d, i) => B('div', { key: i, style: cardStyle },
+        B('div', { style: topBar(SECTION_COLORS[i]) }),
+        B('div', { style: { fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 } }, d.entity),
+        B('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+          B('div', null,
+            B('div', { style: { fontSize: 10, color: C.converted, textTransform: 'uppercase', letterSpacing: 0.8 } }, 'Converted'),
+            B('div', { style: { fontSize: 32, fontWeight: 800, color: C.converted, lineHeight: 1.1 } }, d.convPct + '%'),
+            B('div', { style: { fontSize: 11, color: C.textDim, marginTop: 2 } }, d.convN + ' companies')
+          ),
+          B('div', null,
+            B('div', { style: { fontSize: 10, color: C.never, textTransform: 'uppercase', letterSpacing: 0.8 } }, 'Never Converted'),
+            B('div', { style: { fontSize: 32, fontWeight: 800, color: C.never, lineHeight: 1.1 } }, d.neverPct + '%'),
+            B('div', { style: { fontSize: 11, color: C.textDim, marginTop: 2 } }, d.neverN + ' companies')
+          )
+        ),
+        B('div', { style: { marginTop: 12, fontSize: 12, color: C.textMuted, textAlign: 'center', background: C.bg, borderRadius: 6, padding: '4px 8px' } },
+          B('strong', { style: { color: C.accent } }, (d.convPct / d.neverPct).toFixed(1) + '\u00d7'), ' more likely to file if converted'
+        )
+      ))
+    ),
+    B(Insight, { type: 'success' }, B('span', null, 'Across all entity types, ', B('strong', null, 'converted companies are 5\u20137\u00d7 more likely to file tickets'), '. The propensity is remarkably consistent (~35% converted vs ~5\u20137% never).')),
+    B(Insight, { type: 'danger' }, B('span', null, B('strong', null, 'S-Corp converted users file at similar rates (35.9%)'), ' but never-converted S-Corps are the only group where those who DO file tickets submit more per company (2.0 vs 1.93).')),
+    B('div', { style: { marginTop: 28 } },
+      B(SectionHeader, { num: '2', title: 'Ticket Topics by Entity Type', subtitle: "Select an entity to see category mix and top product areas.", color: SECTION_COLORS[2] }),
+      B('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
+        ['No Entity (New)', 'LLC', 'S-Corp'].map(e => B('button', { key: e, onClick: () => setSelectedEntity(e), style: {
+          background: selectedEntity === e ? C.accentBg : '#fff',
+          border: '1px solid ' + (selectedEntity === e ? C.accent : C.border),
+          borderRadius: 8, padding: '8px 16px', color: selectedEntity === e ? C.accent : C.textDim,
+          fontSize: 13, fontWeight: selectedEntity === e ? 700 : 500, cursor: 'pointer',
+        } }, e))
+      ),
+      B('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } },
+        B('div', { style: cardStyle },
+          B('div', { style: topBar(C.accent) }),
+          B('div', { style: { fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 } }, 'Category Mix'),
+          B(ResponsiveContainer, { width: '100%', height: 220 },
+            B(BarChart, { data: ENTITY_TICKETS.catMix[selectedEntity], layout: 'vertical' },
+              B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border, horizontal: false }),
+              B(XAxis, { type: 'number', tick: { fill: C.textMuted, fontSize: 10 }, axisLine: { stroke: C.border } }),
+              B(YAxis, { dataKey: 'cat', type: 'category', width: 100, tick: { fill: C.textMuted, fontSize: 10 }, axisLine: { stroke: C.border } }),
+              B(Tooltip, { content: B(CustomTooltip) }),
+              B(Bar, { dataKey: 'converted', name: 'Converted', fill: C.converted, stackId: 'a', barSize: 14 }),
+              B(Bar, { dataKey: 'never', name: 'Never Converted', fill: C.never, stackId: 'a', barSize: 14, radius: [0,4,4,0] }),
+            )
+          )
+        ),
+        B('div', { style: cardStyle },
+          B('div', { style: topBar(C.chart4) }),
+          B('div', { style: { fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 } }, 'Top Product Areas'),
+          B('div', { style: { display: 'grid', gap: 4 } },
+            B('div', { style: { display: 'grid', gridTemplateColumns: '2fr 45px 45px 80px', gap: 6, padding: '0 0 6px', borderBottom: '1px solid ' + C.border } },
+              B('span', { style: { fontSize: 10, color: C.textDim, textTransform: 'uppercase' } }, 'Issue'),
+              B('span', { style: { fontSize: 10, color: C.converted, textTransform: 'uppercase', textAlign: 'right' } }, 'Conv'),
+              B('span', { style: { fontSize: 10, color: C.never, textTransform: 'uppercase', textAlign: 'right' } }, 'Never'),
+              B('span', { style: { fontSize: 10, color: C.textDim, textTransform: 'uppercase' } }, 'Split'),
+            ),
+            ENTITY_TICKETS.topSubs[selectedEntity].map((s, i) => {
+              const total = s.conv + s.never;
+              const convPct = Math.round(s.conv / total * 100);
+              return B('div', { key: i, style: { display: 'grid', gridTemplateColumns: '2fr 45px 45px 80px', gap: 6, alignItems: 'center', padding: '3px 0' } },
+                B('span', { style: { fontSize: 12, color: C.text } }, s.sub),
+                B('span', { style: { fontSize: 12, fontWeight: 600, color: C.converted, textAlign: 'right' } }, s.conv),
+                B('span', { style: { fontSize: 12, fontWeight: 600, color: C.never, textAlign: 'right' } }, s.never),
+                B('div', { style: { height: 7, background: C.border, borderRadius: 3, overflow: 'hidden', display: 'flex' } },
+                  B('div', { style: { width: convPct + '%', background: C.converted, height: '100%' } }),
+                  B('div', { style: { width: (100 - convPct) + '%', background: C.never, height: '100%' } })
+                )
+              );
+            })
+          )
+        )
+      ),
+      B(Insight, { type: 'success' }, B('span', null, B('strong', null, 'NONE (New)'), ': Top issue is Incorporation (105 tickets, 61% converted). Financial questions skew heavily converted (82-86%).')),
+      B(Insight, { type: 'warning' }, B('span', null, B('strong', null, 'LLC'), ': "Existing LLC" is a unique friction point (27 tickets, 63% never-converted). Cancellation is #4 at 26 tickets (88% never-converted).')),
+      B(Insight, { type: 'danger' }, B('span', null, B('strong', null, 'S-Corp'), ': Cancellation is the #1 issue (14 tickets, 93% never-converted). Cancellation rate is 13.6% of all S-Corp tickets vs 6.4% for NONE/LLC.'))
+    )
+  );
+
+  const renderTimeline = () => B('div', null,
+    B(SectionHeader, { num: '1', title: 'When Do Converted Users File Tickets?', subtitle: 'Distribution of pre-income tickets by months before income received', color: SECTION_COLORS[0] }),
+    B('div', { style: cardStyle },
+      B('div', { style: topBar(C.converted) }),
+      B(ResponsiveContainer, { width: '100%', height: 280 },
+        B(BarChart, { data: ticketTimingData },
+          B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border }),
+          B(XAxis, { dataKey: 'label', tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(YAxis, { tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(Tooltip, { content: B(CustomTooltip) }),
+          B(Bar, { dataKey: 'count', radius: [6,6,0,0], barSize: 40 },
+            ticketTimingData.map((e, i) => B(Cell, { key: i, fill: i === 0 ? C.converted : i <= 1 ? C.accent : C.textDim }))
+          )
+        )
+      ),
+      B(Insight, { type: 'success' }, B('span', null, B('strong', null, '72% of converted-company tickets'), ' (460 of 637) are filed within 1 month of reaching income. The pre-income period is short and intense.'))
+    )
+  );
+
+  const renderProduct = () => B('div', null,
+    B(SectionHeader, { num: '1', title: 'Top 15 Pre-Income Issues (All Users)', subtitle: 'Most common specific product areas users contact support about before reaching income', color: SECTION_COLORS[1] }),
+    B('div', { style: cardStyle },
+      B('div', { style: topBar(C.accent) }),
+      B(ResponsiveContainer, { width: '100%', height: 520 },
+        B(BarChart, { data: productAreas.top_issues, layout: 'vertical', margin: { left: 10 } },
+          B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border, horizontal: false }),
+          B(XAxis, { type: 'number', tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(YAxis, { dataKey: 'name', type: 'category', width: 175, tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+          B(Tooltip, { content: B(CustomTooltip) }),
+          B(Legend, { wrapperStyle: { fontSize: 12 } }),
+          B(Bar, { dataKey: 'converted', name: 'Converted', fill: C.converted, stackId: 'a', barSize: 16 }),
+          B(Bar, { dataKey: 'never', name: 'Never Converted', fill: C.never, stackId: 'a', barSize: 16, radius: [0,4,4,0] }),
+        )
+      ),
+      B(Insight, { type: 'success' }, B('span', null, B('strong', null, 'Incorporation & Formation'), ' is the #1 issue (143 tickets) and skews converted (57%).')),
+      B(Insight, { type: 'danger' }, B('span', null, B('strong', null, 'Cancellation'), ' is #3 overall (84 tickets) and 92% never-converted. ', B('strong', null, 'Account Setup'), ' is #2 (98 tickets) and 57% never-converted.')),
+      B(Insight, { type: 'info' }, B('span', null, B('strong', null, 'Financial questions'), ' (Banking, Invoicing, Taxes, Payroll) collectively total 191 tickets and skew heavily converted (72%).'))
+    ),
+    B('div', { style: { marginTop: 28 } },
+      B(SectionHeader, { num: '2', title: "Category Breakdown: What's Driving Volume", subtitle: 'High-level ticket categories \u2014 click to expand subcategory detail', color: SECTION_COLORS[0] }),
+      B('div', { style: cardStyle },
+        B('div', { style: topBar(C.converted) }),
+        B(ResponsiveContainer, { width: '100%', height: 280 },
+          B(BarChart, { data: productAreas.cat_summary, layout: 'vertical', margin: { left: 10 } },
+            B(CartesianGrid, { strokeDasharray: '3 3', stroke: C.border, horizontal: false }),
+            B(XAxis, { type: 'number', tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+            B(YAxis, { dataKey: 'cat', type: 'category', width: 190, tick: { fill: C.textMuted, fontSize: 11 }, axisLine: { stroke: C.border } }),
+            B(Tooltip, { content: B(CustomTooltip) }),
+            B(Legend, { wrapperStyle: { fontSize: 12 } }),
+            B(Bar, { dataKey: 'converted', name: 'Converted', fill: C.converted, stackId: 'a', barSize: 18 }),
+            B(Bar, { dataKey: 'never', name: 'Never Converted', fill: C.never, stackId: 'a', barSize: 18, radius: [0,4,4,0] }),
+          )
+        )
+      )
+    ),
+    B('div', { style: { marginTop: 28 } },
+      B(SectionHeader, { num: '3', title: 'Subcategory Deep Dive', subtitle: 'Expand each category to see the specific product areas driving tickets', color: SECTION_COLORS[2] }),
+      productAreas.cat_summary.map((cat, ci) => {
+        const subs = productAreas.subcats.filter(s => s.category === cat.cat);
+        const isOpen = expandedCat === cat.cat;
+        const convPct = Math.round(cat.converted / cat.total * 100);
+        return B('div', { key: ci, style: { ...cardStyle, marginBottom: 12, padding: 0, cursor: 'pointer' }, onClick: () => setExpandedCat(isOpen ? null : cat.cat) },
+          B('div', { style: topBar(convPct >= 50 ? C.converted : C.never) }),
+          B('div', { style: { padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+            B('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+              B('span', { style: { fontSize: 18, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: C.textDim } }, '\u25b6'),
+              B('div', null,
+                B('div', { style: { fontSize: 15, fontWeight: 700, color: C.text } }, cat.cat),
+                B('div', { style: { fontSize: 12, color: C.textDim, marginTop: 2 } }, cat.total + ' tickets \u00b7 ' + convPct + '% from converted')
+              )
+            ),
+            B('div', { style: { display: 'flex', gap: 16, alignItems: 'center' } },
+              B('div', { style: { textAlign: 'right' } },
+                B('span', { style: { fontSize: 14, fontWeight: 700, color: C.converted } }, cat.converted),
+                B('span', { style: { fontSize: 12, color: C.textDim } }, ' / '),
+                B('span', { style: { fontSize: 14, fontWeight: 700, color: C.never } }, cat.never)
+              ),
+              B('div', { style: { width: 80, height: 8, background: C.border, borderRadius: 4, overflow: 'hidden', display: 'flex' } },
+                B('div', { style: { width: convPct + '%', background: C.converted, height: '100%' } }),
+                B('div', { style: { width: (100 - convPct) + '%', background: C.never, height: '100%' } })
+              )
+            )
+          ),
+          isOpen && subs.length > 0 && B('div', { style: { borderTop: '1px solid ' + C.border, padding: '12px 20px 16px' }, onClick: e => e.stopPropagation() },
+            B('div', { style: { display: 'grid', gap: 6 } },
+              B('div', { style: { display: 'grid', gridTemplateColumns: '2fr 60px 60px 60px 100px', gap: 8, padding: '0 0 6px', borderBottom: '1px solid ' + C.border } },
+                B('span', { style: { fontSize: 10, color: C.textDim, textTransform: 'uppercase' } }, 'Subcategory'),
+                B('span', { style: { fontSize: 10, color: C.converted, textTransform: 'uppercase', textAlign: 'right' } }, 'Conv.'),
+                B('span', { style: { fontSize: 10, color: C.never, textTransform: 'uppercase', textAlign: 'right' } }, 'Never'),
+                B('span', { style: { fontSize: 10, color: C.textDim, textTransform: 'uppercase', textAlign: 'right' } }, 'Total'),
+                B('span', { style: { fontSize: 10, color: C.textDim, textTransform: 'uppercase' } }, 'Split')
+              ),
+              subs.map((sub, si) => {
+                const sp = Math.round(sub.converted / sub.total * 100);
+                return B('div', { key: si, style: { display: 'grid', gridTemplateColumns: '2fr 60px 60px 60px 100px', gap: 8, alignItems: 'center', padding: '4px 0' } },
+                  B('span', { style: { fontSize: 13, color: C.text } }, sub.sub),
+                  B('span', { style: { fontSize: 13, fontWeight: 600, color: C.converted, textAlign: 'right' } }, sub.converted),
+                  B('span', { style: { fontSize: 13, fontWeight: 600, color: C.never, textAlign: 'right' } }, sub.never),
+                  B('span', { style: { fontSize: 13, fontWeight: 600, color: C.textMuted, textAlign: 'right' } }, sub.total),
+                  B('div', { style: { height: 8, background: C.border, borderRadius: 4, overflow: 'hidden', display: 'flex' } },
+                    B('div', { style: { width: sp + '%', background: C.converted, height: '100%' } }),
+                    B('div', { style: { width: (100 - sp) + '%', background: C.never, height: '100%' } })
+                  )
+                );
+              })
+            )
+          )
+        );
+      }),
+      B(Insight, { type: 'success' }, B('span', null, B('strong', null, 'Notices & Documents'), ' skews 81% converted (51 of 63). ', B('strong', null, 'Existing S-Corp'), ' tickets skew 89% never-converted (17 of 19).')),
+      B(Insight, { type: 'danger' }, B('span', null, 'Within ', B('strong', null, 'Account & Subscription'), ', cancellations (84) outnumber even account setup (92). The never-converted pipeline is: setup confusion \u2192 billing questions \u2192 cancellation.')),
+      B(Insight, { type: 'info' }, B('span', null, B('strong', null, 'Financial Mgmt'), ' is the most converted-skewed category (72%). ', B('strong', null, 'Invoicing & Payments'), ' (82% converted) and ', B('strong', null, 'Banking & Cards'), ' (70% converted) indicate users actively moving money through Lettuce.'))
+    )
+  );
+
+  const renderInsights = () => B('div', null,
+    B(SectionHeader, { num: '\u2605', title: 'Strategic Insights & Recommendations', subtitle: 'Ticket-data-driven findings from 1,379 pre-income tickets across 785 companies', color: C.warning }),
+    [
+      { title: 'Financial Management Tickets Are the Strongest Conversion Predictor', color: C.converted,
+        findings: ['Financial Mgmt tickets are 2.5x more common in converted users (180 vs 71)', 'Invoicing & Payments: 82% converted (47 of 57). Banking & Cards: 70% converted (43 of 61)', 'For NONE entity users, financial questions are 85% converted (93 of 110)'],
+        action: 'Users asking financial questions are at the finish line. Prioritize fast resolution for Invoicing, Banking, and Payroll tickets. Consider proactive financial onboarding for users who haven\'t engaged with these areas yet.' },
+      { title: 'The Never-Converted Pipeline: Setup \u2192 Billing \u2192 Cancellation', color: C.never,
+        findings: ['Account Setup: 57% never-converted (56 of 98). Billing/Pricing: 56% never-converted (30 of 54). Cancellation: 92% never-converted (77 of 84)', 'Account & Sub tickets are 72% never-converted for LLC (65 of 90) and 88% for S-Corp (23 of 26)', 'Meeting/Call Requests skew never-converted (61%, 31 of 51) \u2014 users seeking human reassurance before they give up'],
+        action: 'Intervene early in the Account & Sub pipeline. When a user files a setup or billing ticket, trigger proactive value messaging. When they request a call, treat it as a retention opportunity.' },
+      { title: 'S-Corp Users Have a Fundamentally Different Ticket Pattern', color: C.chart4,
+        findings: ['S-Corp is the ONLY entity type where never-converted file more tickets per company (2.0) than converted (1.93)', 'Cancellation is the #1 S-Corp issue (14 tickets, 93% never-converted)', 'S-Corp cancellation rate is 13.6% of all tickets vs 6.4% for NONE and LLC'],
+        action: 'S-Corp users need a different support experience. Their tickets indicate confusion about what Lettuce adds. Build S-Corp-specific onboarding that leads with payroll/tax automation value.' },
+      { title: 'Notices & Documents: Hidden Conversion Signal', color: C.accent,
+        findings: ['Notices & Documents tickets are 81% converted (51 of 63 in Biz Formation)', 'Highest conversion skew of any major subcategory', 'These users are deep in the formation process \u2014 a sign of real commitment'],
+        action: 'Users filing Notices & Documents tickets are almost certainly converting. Ensure fast turnaround and use this signal to identify high-intent users for proactive support.' },
+    ].map((ins, i) => B('div', { key: i, style: { ...cardStyle, marginBottom: 16 } },
+      B('div', { style: topBar(ins.color) }),
+      B('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 } },
+        B('span', { style: { background: ins.color, color: '#fff', fontWeight: 800, fontSize: 11, width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, i + 1),
+        B('h3', { style: { fontSize: 16, fontWeight: 700, color: C.text, margin: 0 } }, ins.title)
+      ),
+      B('div', { style: { marginLeft: 34 } },
+        ins.findings.map((f, j) => B('div', { key: j, style: { display: 'flex', gap: 8, marginBottom: 6 } },
+          B('span', { style: { color: ins.color, fontSize: 8, marginTop: 5 } }, '\u25cf'),
+          B('span', { style: { color: C.textMuted, fontSize: 13, lineHeight: 1.5 } }, f)
+        )),
+        B('div', { style: { background: ins.color + '10', border: '1px solid ' + ins.color + '25', borderRadius: 8, padding: '8px 12px', marginTop: 8 } },
+          B('span', { style: { fontSize: 11, fontWeight: 700, color: ins.color, textTransform: 'uppercase', letterSpacing: 0.8 } }, '\u2192 Action'),
+          B('div', { style: { color: C.text, fontSize: 13, marginTop: 4, lineHeight: 1.5 } }, ins.action)
+        )
+      )
+    ))
+  );
+
+  const renderers = { overview: renderOverview, product: renderProduct, categories: renderCategories, business: renderBusiness, entity: renderEntity, timeline: renderTimeline, insights: renderInsights };
+
+  return B('div', { style: { background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'DM Sans', 'Segoe UI', system-ui, sans-serif" } },
+    B('div', { style: { background: '#fff', borderBottom: '1px solid ' + C.border, padding: '28px 32px 20px' } },
+      B('div', { style: { maxWidth: 1100, margin: '0 auto' } },
+        B('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 } },
+          B('span', { style: { fontSize: 12, color: C.textDim, background: C.bg, padding: '2px 8px', borderRadius: 4, border: '1px solid ' + C.border } }, 'SUPPORT ANALYTICS')
+        ),
+        B('h1', { style: { fontSize: 22, fontWeight: 700, margin: '8px 0 4px' } }, 'Pre-Income Ticket Analysis'),
+        B('p', { style: { color: C.textMuted, fontSize: 13, margin: 0 } }, '1,379 support tickets from 785 companies \u00b7 Jan\u2013Oct 2025 \u00b7 Converted vs. Never-Converted')
+      )
+    ),
+    B('div', { style: { background: '#fff', borderBottom: '1px solid ' + C.border, position: 'sticky', top: 0, zIndex: 50 } },
+      B('div', { style: { maxWidth: 1100, margin: '0 auto', display: 'flex', gap: 0, padding: '0 32px', overflowX: 'auto' } },
+        sections.map(s => B('button', { key: s.id, onClick: () => setActiveSection(s.id), style: {
+          background: 'none', border: 'none', padding: '12px 18px',
+          color: activeSection === s.id ? C.text : C.textDim,
+          fontSize: 13, fontWeight: activeSection === s.id ? 700 : 500,
+          cursor: 'pointer',
+          borderBottom: activeSection === s.id ? '2px solid ' + C.converted : '2px solid transparent',
+          transition: 'all 0.15s', whiteSpace: 'nowrap'
+        } }, s.label))
+      )
+    ),
+    B('div', { style: { maxWidth: 1100, margin: '0 auto', padding: '28px 32px 60px' } },
+      renderers[activeSection]()
+    )
+  );
+}
+
+ReactDOM.render(React.createElement(Dashboard), document.getElementById('root'));
+</script>
+</body>
+</html>
